@@ -1,0 +1,93 @@
+@import "tailwindcss";
+
+:root {
+  /* Core Colors */
+  --primary: #c084fc;
+  --primary-container: #3b0764;
+  --on-primary-container: #f5f3ff;
+  --secondary: #2dd4bf;
+  --secondary-container: #134e4a;
+  --tertiary: #fb7185;
+  --background: #16171d;
+  --on-background: #f3f4f6;
+  --surface: #1f2028;
+  --on-surface: #f3f4f6;
+  --on-surface-variant: #9ca3af;
+  --outline: #4b5563;
+  --outline-variant: #2e303a;
+  
+  /* Surface Containers */
+  --surface-container-lowest: #0f1014;
+  --surface-container-low: #1c1d24;
+  --surface-container: #1f2028;
+  --surface-container-high: #282a33;
+  --surface-container-highest: #33353f;
+
+  --text: #9ca3af;
+  --text-h: #f3f4f6;
+  --bg: #16171d;
+  --border: #2e303a;
+  --code-bg: #1f2028;
+  --accent: #aa3bff;
+  --accent-bg: rgba(170, 59, 255, 0.1);
+  --accent-border: rgba(170, 59, 255, 0.5);
+  --social-bg: rgba(244, 243, 236, 0.5);
+  --shadow: rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
+
+  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
+  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
+  --mono: ui-monospace, Consolas, monospace;
+
+  font: 18px/145% var(--sans);
+  letter-spacing: 0.18px;
+  color-scheme: dark;
+  color: var(--text);
+  background: var(--bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@theme {
+  --color-primary: var(--primary);
+  --color-primary-container: var(--primary-container);
+  --color-on-primary-container: var(--on-primary-container);
+  --color-secondary: var(--secondary);
+  --color-secondary-container: var(--secondary-container);
+  --color-tertiary: var(--tertiary);
+  --color-background: var(--background);
+  --color-on-background: var(--on-background);
+  --color-surface-container-lowest: var(--surface-container-lowest);
+  --color-surface-container-low: var(--surface-container-low);
+  --color-surface-container: var(--surface-container);
+  --color-surface-container-high: var(--surface-container-high);
+  --color-surface-container-highest: var(--surface-container-highest);
+  --color-on-surface: var(--on-surface);
+  --color-on-surface-variant: var(--on-surface-variant);
+  --color-outline: var(--outline);
+  --color-outline-variant: var(--outline-variant);
+}
+
+body {
+  margin: 0;
+  background-color: var(--bg);
+}
+
+#root {
+  min-height: 100svh;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--outline-variant);
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--outline);
+}
