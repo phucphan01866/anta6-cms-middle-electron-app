@@ -13,8 +13,15 @@ async function forwardWithRetry(conn, logData) {
   const adminEmail = process.env.ADMIN_EMAIL || 'admin@cms.com';
   const adminPass = process.env.ADMIN_PASSWORD || 'admin1234';
 
+  // const sendRequest = (token) => {
+  //   return axios.post(`${conn.url}/api/v1/forward-logs`, logData, {
+  //     headers: { Authorization: `Bearer ${token}` },
+  //     timeout: 5000
+  //   });
+  // };
+
   const sendRequest = (token) => {
-    return axios.post(`${conn.url}/api/v1/forward-logs`, logData, {
+    return axios.post(`${conn.url}/api/v1/logs`, logData, {
       headers: { Authorization: `Bearer ${token}` },
       timeout: 5000
     });
@@ -89,9 +96,10 @@ router.post('/api/v1/logs', async (req, res) => {
   // 2. Forward log tới các target server đã đăng ký (mode === 'send') qua HTTP POST
   const sendTargets = connections.filter(c => c.mode === 'send');
   for (const conn of sendTargets) {
-    console.log('conn: ', conn)
+    // console.log('conn: ', conn)
+    clientSockets.emit('test', req.body);
     try {
-      await forwardWithRetry(conn, logData);
+      await forwardWithRetry(conn, req.body);
       conn.sentCount = (conn.sentCount || 0) + 1;
       if (conn.status !== 'connected') {
         conn.status = 'connected';
@@ -120,6 +128,7 @@ router.post('/api/v1/forward-logs', authMiddleware, async (req, res) => {
 
   clientSockets.emit('receive-log', req.body);
   clientSockets.emit('log-dispatched', { timestamp: req.body?.timestamp || new Date().toISOString() });
+  // clientSockets.emit('test', req.body)
 
   return res.status(200).send({ success: true });
 });

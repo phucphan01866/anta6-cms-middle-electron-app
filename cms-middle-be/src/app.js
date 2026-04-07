@@ -81,7 +81,7 @@ app.use((req, res, next) => {
     if (req.originalUrl === '/api/v1/server') {
       // console.log(req.body);
     }
-    console.log(req.originalUrl);
+    // console.log(req.originalUrl);
     if (req.originalUrl === '/api/v1/devices') {
       // console.log(req.body);
     }

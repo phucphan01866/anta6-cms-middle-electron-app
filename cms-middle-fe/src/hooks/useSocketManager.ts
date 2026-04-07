@@ -298,6 +298,9 @@ export function useSocketManager() {
     socket.on('log-dispatched', onLogDispatched);
     socket.on('receive-server', onReceiveServer);
     socket.on('receive-devices', onReceiveDevices);
+    socket.on('test', (data) => {
+      console.log('test data', data)
+    })
 
     return () => {
       socket.off('external-connect', onConnectedExternalServer);
@@ -308,6 +311,9 @@ export function useSocketManager() {
       socket.off('log-dispatched', onLogDispatched);
       socket.off('receive-server', onReceiveServer);
       socket.off('receive-devices', onReceiveDevices);
+      socket.off('test', (data) => {
+        console.log('test data', data)
+      })
     };
   }, []);
 

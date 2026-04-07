@@ -53,7 +53,7 @@ app.whenReady().then(() => {
     // Start backend in production
     startBackend();
   }
-  
+
   createWindow();
 
   app.on('activate', () => {

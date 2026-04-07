@@ -86,7 +86,7 @@ export function StatusBar({
         }
       });
     });
-    console.log('Orphan Devices:', orphans);
+    // console.log('Orphan Devices:', orphans);
     return orphans;
   }, [deviceLogStats, servers, devices]);
 
@@ -102,8 +102,8 @@ export function StatusBar({
 
   const tabs = [
     { name: 'Current Connection' },
-    { name: 'Data Input' },
-    { name: 'Send Data' },
+    { name: 'Receiving Data From' },
+    { name: 'Sending Data To' },
   ];
 
   function reconnectSocket() {

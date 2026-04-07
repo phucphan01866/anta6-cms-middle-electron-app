@@ -1,6 +1,6 @@
 const express = require('express');
 const axios = require('axios');
-const { connections } = require('../socketState');
+const { connections, getClientSockets } = require('../socketState');
 const { notifyStatusToClients, getActiveClients, removeConnection, disconnectClientSocket } = require('../helpers/notify');
 const authMiddleware = require('../middleware/auth.middleware');
 
@@ -37,7 +37,7 @@ router.post('/api/v1/disconnect-client', async (req, res) => {
  */
 router.post('/api/v1/create-connection', async (req, res) => {
   const { ip, port, mode } = req.body;
-  console.log("create-connection to ", ip, port, mode);
+  // console.log("create-connection to ", ip, port, mode);
   if (!ip || !port) return res.status(400).send({ success: false, message: 'Missing IP or Port' });
 
   const url = `http://${ip}:${port}`;
@@ -63,9 +63,9 @@ router.post('/api/v1/create-connection', async (req, res) => {
         email: adminEmail,
         password: adminPass
       }, { timeout: 5000 });
+      // getClientSockets().emit('test', loginRes);
 
       console.log(loginRes)
-
 
       if (loginRes.data && loginRes.data.success && loginRes.data.data.accessToken) {
         console.log(`[AUTH] Login successful to ${url}`);
@@ -76,15 +76,16 @@ router.post('/api/v1/create-connection', async (req, res) => {
         connections.push({ url, ip, port, mode: connMode, status, server_id: 'PENDING', receivedCount: 0, sentCount: 0 });
       }
     } catch (authErr) {
-      console.error(`[AUTH_ERROR] Could not login to ${url}: ${authErr.message}`);
-      connections.push({ url, ip, port, mode: connMode, status: 'auth_error', server_id: 'PENDING', receivedCount: 0, sentCount: 0 });
+      console.error(`[AUTH_ERROR] Could not login to ${url}: ${authErr}`);
+      // getClientSockets().emit('test', authErr);
       status = 'auth_error';
+      removeConnection(url);
     }
   } catch {
     status = 'unreachable';
     connections.push({ url, ip, port, mode: connMode, status, server_id: 'PENDING', receivedCount: 0, sentCount: 0 });
   }
-
+  // getClientSockets().emit('test', connections);
   notifyStatusToClients(url, connMode, status === 'connected' ? 'connected' : 'error');
 
   return res.status(200).send({ success: true, message: `Registered ${url} (status: ${status})`, ip, port, status });

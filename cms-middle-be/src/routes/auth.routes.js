@@ -33,7 +33,7 @@ router.post('/api/v1/login', async (req, res) => {
     //     user: { email, role: 'admin' }
     //   }
     // });
-    return res.status(201).send({ data: { accessToken } });
+    return res.status(201).send({ success: true, data: { accessToken } });
   }
 
 
