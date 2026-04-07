@@ -1,6 +1,6 @@
 // ─── SOCKET SERVER EVENTS (BE↔FE only) ───────────────────────────────────────
 const { getClientSockets } = require('./socketState');
-const { syncClientsToFrontend } = require('./helpers/notify');
+const { syncClientsToFrontend, syncConnectionsToFrontend } = require('./helpers/notify');
 
 /**
  * Sets up Socket.IO event listeners for the client server.
@@ -10,13 +10,14 @@ const setupSocketEvents = () => {
   const clientSockets = getClientSockets();
 
   clientSockets.on('connection', (socket) => {
-    console.log('[NODE_CONNECTED] New client/node connected. ID:', socket.id);
+    console.log('connect to fe success');
 
     // Khởi tạo sentCount cho socket này
     socket.data = { sentCount: 0 };
 
     // Sync client list to all connected frontends
     syncClientsToFrontend();
+    syncConnectionsToFrontend();
 
     socket.on('message', (data) => {
       console.log(`[MESSAGE] Received message from client ${socket.id} — broadcasting`);

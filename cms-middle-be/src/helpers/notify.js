@@ -12,7 +12,7 @@ const { port } = require('../config');
  * @param {string} status - The status ('connected', 'error', 'disconnected').
  * @param {any} data - Optional data to include in the payload.
  */
-const notifyStatusToClients = (url, mode, status, data = null) => {
+const notifyStatusToClients = (url = null, mode = 'send', status, data = null) => {
   const clientSockets = getClientSockets();
   const payload = { url, type: mode, status };
 
@@ -22,6 +22,7 @@ const notifyStatusToClients = (url, mode, status, data = null) => {
   if (status === 'disconnected') eventName = 'external-disconnected';
   if (status === 'receive-log') eventName = 'receive-log';
   if (status === 'log-sent') eventName = 'log-sent';
+  if (status === 'update-send-servers') eventName = 'update-send-servers';
 
   clientSockets.emit(eventName, { ...payload, data });
 };
@@ -62,6 +63,13 @@ const syncClientsToFrontend = async () => {
   const clientSockets = getClientSockets();
   const clients = await getActiveClients();
   clientSockets.emit('update-clients', clients);
+};
+
+const syncConnectionsToFrontend = () => {
+  const clientSockets = getClientSockets();
+  const sendList = connections.filter(c => c.mode === 'send');
+  const receiveList = connections.filter(c => c.mode === 'receive');
+  clientSockets.emit('update-connections', { sendList, receiveList });
 };
 
 /**
@@ -115,6 +123,7 @@ module.exports = {
   notifyStatusToClients,
   getActiveClients,
   syncClientsToFrontend,
+  syncConnectionsToFrontend,
   removeConnection,
   disconnectClientSocket,
 };

@@ -123,19 +123,22 @@ router.post('/api/v1/remove-connection', (req, res) => {
  * @returns {object} 200 - { sendList: Array, receiveList: Array }
  */
 router.get('/api/v1/connections', async (req, res) => {
-  // sendList = các client đang kết nối vào server này (FE, nodes cấp dưới)
-  const sendList = (await getActiveClients()).map(({ mode, ...rest }) => rest);
+  const sendList = connections.filter(c => c.mode === 'send');
+  const receiveList = connections.filter(c => c.mode === 'receive');
 
-  // receiveList = các server đã đăng ký (metadata)
-  const receiveList = connections.map(c => ({
-    ip: c.ip,
-    port: c.port,
-    status: c.status,
-    server_id: c.server_id || 'PENDING',
-    receivedCount: c.receivedCount || 0,
-  }));
+  const connectedClients = await getActiveClients();
 
-  res.json({ sendList, receiveList });
+  res.json({ sendList, receiveList, activeMonitoringClients: connectedClients });
 });
 
 module.exports = router;
+
+router.get('/api/v1/reset-all', async (req, res) => {
+  connections.splice(0, connections.length); // Xóa mảng an toàn
+
+  // Trigger lại event để FE update trắng màn hình
+  const { syncConnectionsToFrontend } = require('../helpers/notify');
+  if (syncConnectionsToFrontend) syncConnectionsToFrontend();
+  
+  return res.status(200).send({ success: true, message: 'Reset all connections' });
+});

@@ -145,6 +145,8 @@ export function useSocketManager() {
         updated[idx] = { ...updated[idx], status };
         return updated;
       }
+      console.log("updateSendServers", [...prev, { ip, port, status }])
+
       return [...prev, { ip, port, status }];
     });
   };
@@ -179,20 +181,20 @@ export function useSocketManager() {
       if (type === 'send') {
         updateSendServers(parsed.hostname, parsed.port, status);
       } else {
-        setReceiveDictionary(prev => {
-          const idx = prev.findIndex(s => s.ip === parsed.hostname);
-          if (idx !== -1) {
-            const updated = [...prev];
-            updated[idx] = { ...updated[idx], status };
-            return updated;
-          }
-          return [...prev, {
-            server_id: 'UNKNOWN',
-            ip: parsed.hostname,
-            port: parsed.port || '5050',
-            status: status
-          }];
-        });
+        // setReceiveDictionary(prev => {
+        //   const idx = prev.findIndex(s => s.ip === parsed.hostname);
+        //   if (idx !== -1) {
+        //     const updated = [...prev];
+        //     updated[idx] = { ...updated[idx], status };
+        //     return updated;
+        //   }
+        //   return [...prev, {
+        //     server_id: 'UNKNOWN',
+        //     ip: parsed.hostname,
+        //     port: parsed.port || '5050',
+        //     status: status
+        //   }];
+        // });
       }
     }
 
@@ -203,26 +205,27 @@ export function useSocketManager() {
       })));
     }
 
-    function onUpdateClients(clients: SystemConnection[]) {
-      setSendDictionary(prev => {
-        const pendings = prev.filter(s => s.status === 'connecting' || s.server_id === 'PENDING');
+    function onUpdateConnections(data: { sendList: SystemConnection[], receiveList: SystemConnection[] }) {
+      console.log('[SOCKET] update-connections:', data);
 
-        const merged = clients.map(client => {
-          const existing = prev.find(s => s.socketId === client.socketId || (s.ip === client.ip && s.port === client.port));
+      // Merge để không làm mất 'sentCount' và 'status' hiện tại
+      setSendDictionary(prev => {
+        return (data.sendList || []).map(newServer => {
+          const existing = prev.find(p => p.ip === newServer.ip && p.port === newServer.port);
           return {
-            ...client,
-            sentCount: client.sentCount !== undefined ? client.sentCount : (existing ? (existing.sentCount || 0) : 0)
+            ...newServer,
+            sentCount: existing ? existing.sentCount : 0,
+            status: existing && newServer.status === 'connected' ? existing.status : newServer.status
           };
         });
-
-        pendings.forEach(p => {
-          if (!merged.find(m => m.ip === p.ip)) {
-            merged.push({ ...p, sentCount: p.sentCount || 0 });
-          }
-        });
-
-        return merged;
       });
+
+      setReceiveDictionary(data.receiveList || []);
+    }
+
+    function onUpdateClients(clients: SystemConnection[]) {
+      // Giờ đây update-clients chỉ dùng để hiển thị các client đang kết nối VÀO BE (Active Monitoring)
+      // Không ghi đè lên sendDictionary (Targets) nữa
     }
 
     function onDisconnectedExternalServer(raw: any) {
@@ -290,6 +293,8 @@ export function useSocketManager() {
       }
     };
 
+    // Remove unused onUpdateSendServers
+
     socket.on('external-connect', onConnectedExternalServer);
     socket.on('external-disconnect', onDisconnectedExternalServer);
     socket.on('external-err-connect', onErrorExternalServer);
@@ -298,6 +303,7 @@ export function useSocketManager() {
     socket.on('log-dispatched', onLogDispatched);
     socket.on('receive-server', onReceiveServer);
     socket.on('receive-devices', onReceiveDevices);
+    socket.on('update-connections', onUpdateConnections);
     socket.on('test', (data) => {
       console.log('test data', data)
     })
@@ -311,6 +317,7 @@ export function useSocketManager() {
       socket.off('log-dispatched', onLogDispatched);
       socket.off('receive-server', onReceiveServer);
       socket.off('receive-devices', onReceiveDevices);
+      socket.off('update-connections', onUpdateConnections);
       socket.off('test', (data) => {
         console.log('test data', data)
       })
