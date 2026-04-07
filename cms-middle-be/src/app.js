@@ -110,6 +110,6 @@ app.use(healthRoutes);
 app.use(authRoutes);
 app.use(logsRoutes);
 app.use(connectionsRoutes);
-app.use(serverRoutes);
+app.use(serverRoutes.router);
 
 module.exports = app;

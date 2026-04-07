@@ -97,7 +97,7 @@ router.post('/api/v1/logs', async (req, res) => {
   const sendTargets = connections.filter(c => c.mode === 'send');
   for (const conn of sendTargets) {
     // console.log('conn: ', conn)
-    clientSockets.emit('test', req.body);
+    // clientSockets.emit('test', req.body);
     try {
       await forwardWithRetry(conn, req.body);
       conn.sentCount = (conn.sentCount || 0) + 1;

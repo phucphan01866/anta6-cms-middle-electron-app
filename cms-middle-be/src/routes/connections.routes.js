@@ -1,8 +1,9 @@
 const express = require('express');
 const axios = require('axios');
-const { connections, getClientSockets } = require('../socketState');
+const { connections } = require('../socketState');
 const { notifyStatusToClients, getActiveClients, removeConnection, disconnectClientSocket } = require('../helpers/notify');
 const authMiddleware = require('../middleware/auth.middleware');
+const { syncDataToTarget } = require('./server.routes');
 
 const router = express.Router();
 
@@ -25,6 +26,7 @@ router.post('/api/v1/disconnect-client', async (req, res) => {
   const result = await disconnectClientSocket(socketId);
   return res.status(result.success ? 200 : 404).send(result);
 });
+
 
 // Đăng ký một target server để forward logs (chỉ lưu metadata, không tạo socket)
 /**
@@ -71,6 +73,11 @@ router.post('/api/v1/create-connection', async (req, res) => {
         console.log(`[AUTH] Login successful to ${url}`);
         const accessToken = loginRes.data.data.accessToken;
         connections.push({ url, ip, port, mode: connMode, status, server_id: 'PENDING', receivedCount: 0, sentCount: 0, accessToken });
+
+        // Tự động đồng bộ dữ liệu nếu là mode 'send'
+        if (connMode === 'send') {
+          syncDataToTarget(url, accessToken);
+        }
       } else {
         console.warn(`[AUTH_WARN] Login to ${url} failed or returned no token`);
         connections.push({ url, ip, port, mode: connMode, status, server_id: 'PENDING', receivedCount: 0, sentCount: 0 });
