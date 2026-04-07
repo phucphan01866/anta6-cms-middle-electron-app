@@ -46,30 +46,30 @@ async function forwardToSendTargets(endpoint, data) {
   }
 }
 
-// ─── Nhận thông tin server từ SVMS ───────────────────────────────────────────
+// ─── Nhận thông tin server từ SVMS hoặc qua Sync ──────────────────────────────
 /**
  * @route POST /api/v1/server
- * @description Receives server info from SVMS, stores in-memory, emits to FE, forwards to CMS BE.
+ * @description Receives server(s) info from SVMS (or another Middle BE).
+ * Supports both single Object and Array.
  */
 router.post('/api/v1/server', async (req, res) => {
   const clientSockets = getClientSockets();
-  const serverData = req.body;
   const senderIp = (req.ip || '').replace('::ffff:', '');
+  const dataArr = Array.isArray(req.body) ? req.body : [req.body];
 
-  // Lưu in-memory theo server id
-  const serverId = serverData.id || serverData.serial || senderIp;
-  servers.set(serverId, {
-    ...serverData,
-    sender_ip: senderIp,
-    lastSeen: new Date().toISOString()
-  });
+  for (const serverData of dataArr) {
+    if (!serverData) continue;
+    const serverId = serverData.id || serverData.serial || senderIp;
+    servers.set(serverId, {
+      ...serverData,
+      sender_ip: senderIp,
+      lastSeen: new Date().toISOString()
+    });
+    console.log(`[SERVER_INFO] Saved server from ${senderIp}: ${serverData.server_name || serverId}`);
+  }
 
-  console.log(`[SERVER_INFO] Received from ${senderIp}: ${serverData.server_name || serverId}`);
-
-  // Emit tới FE
+  // Emit toàn bộ servers hiện tại tới FE một lần thay vì nhiều lần
   clientSockets.emit('receive-server', {
-    serverId,
-    data: servers.get(serverId),
     allServers: Object.fromEntries(servers)
   });
 
@@ -82,38 +82,39 @@ router.post('/api/v1/server', async (req, res) => {
       console.error(`[SERVER_FORWARD_FAIL] ${err.message}`);
     }
   }
-
   // Forward tới tất cả target server có mode 'send'
-  forwardToSendTargets('/api/v1/server', serverData);
+  forwardToSendTargets('/api/v1/server', req.body);
 
-  return res.status(200).send({ success: true });
+  return res.status(200).send({ success: true, count: dataArr.length });
 });
 
-// ─── Nhận danh sách devices từ SVMS ─────────────────────────────────────────
+// ─── Nhận danh sách devices từ SVMS hoặc qua Sync ───────────────────────────
 /**
  * @route POST /api/v1/devices
- * @description Receives device list from SVMS, stores in-memory, emits to FE, forwards to CMS BE.
+ * @description Receives device lists from SVMS (or another Middle BE).
+ * Supports both single Object and Array.
  */
 router.post('/api/v1/devices', async (req, res) => {
   const clientSockets = getClientSockets();
-  const { server, devices: deviceList } = req.body;
   const senderIp = (req.ip || '').replace('::ffff:', '');
+  const dataArr = Array.isArray(req.body) ? req.body : [req.body];
 
-  // Lưu in-memory theo server_id
-  const serverId = server?.server_id || server?.serial || senderIp;
-  devices.set(serverId, {
-    server,
-    devices: deviceList || [],
-    sender_ip: senderIp,
-    lastSeen: new Date().toISOString()
-  });
+  for (const item of dataArr) {
+    if (!item) continue;
+    const { server, devices: deviceList } = item;
+    const serverId = server?.server_id || server?.serial || senderIp;
+    
+    devices.set(serverId, {
+      server,
+      devices: deviceList || [],
+      sender_ip: senderIp,
+      lastSeen: new Date().toISOString()
+    });
+    console.log(`[DEVICES_INFO] Saved ${(deviceList || []).length} devices for ${serverId}`);
+  }
 
-  console.log(`[DEVICES_INFO] Received ${(deviceList || []).length} devices from ${serverId}`);
-
-  // Emit tới FE
+  // Emit toàn bộ devices hiện tại tới FE một lần
   clientSockets.emit('receive-devices', {
-    serverId,
-    data: devices.get(serverId),
     allDevices: Object.fromEntries(devices)
   });
 
@@ -126,71 +127,12 @@ router.post('/api/v1/devices', async (req, res) => {
       console.error(`[DEVICES_FORWARD_FAIL] ${err.message}`);
     }
   }
-
   // Forward tới tất cả target server có mode 'send'
   forwardToSendTargets('/api/v1/devices', req.body);
 
-  return res.status(200).send({ success: true });
+  return res.status(200).send({ success: true, count: dataArr.length });
 });
 
-// ─── [SYNC] Nhận server data từ Middle khác ──────────────────────────────────
-/**
- * @route POST /api/v1/sync/server
- * @description Nhận server info được sync từ một Middle server khác.
- * Chỉ lưu in-memory và emit lên FE. KHÔNG forward tiếp để tránh loop.
- */
-router.post('/api/v1/sync/server', authMiddleware, (req, res) => {
-  const clientSockets = getClientSockets();
-  const serverData = req.body;
-  const senderIp = (req.ip || '').replace('::ffff:', '');
-  console.log('synced server')
-  const serverId = serverData.id || serverData.serial || senderIp;
-  servers.set(serverId, {
-    ...serverData,
-    sender_ip: senderIp,
-    lastSeen: new Date().toISOString()
-  });
-
-  console.log(`[SYNC_RECV] Server '${serverData.server_name || serverId}' synced from ${senderIp}`);
-
-  clientSockets.emit('receive-server', {
-    serverId,
-    data: servers.get(serverId),
-    allServers: Object.fromEntries(servers)
-  });
-
-  return res.status(200).send({ success: true });
-});
-
-// ─── [SYNC] Nhận devices data từ Middle khác ─────────────────────────────────
-/**
- * @route POST /api/v1/sync/devices
- * @description Nhận device list được sync từ một Middle server khác.
- * Chỉ lưu in-memory và emit lên FE. KHÔNG forward tiếp để tránh loop.
- */
-router.post('/api/v1/sync/devices', authMiddleware, (req, res) => {
-  const clientSockets = getClientSockets();
-  const { server, devices: deviceList } = req.body;
-  const senderIp = (req.ip || '').replace('::ffff:', '');
-  console.log('synced devices')
-  const serverId = server?.server_id || server?.serial || senderIp;
-  devices.set(serverId, {
-    server,
-    devices: deviceList || [],
-    sender_ip: senderIp,
-    lastSeen: new Date().toISOString()
-  });
-
-  console.log(`[SYNC_RECV] ${(deviceList || []).length} devices for '${serverId}' synced from ${senderIp}`);
-
-  clientSockets.emit('receive-devices', {
-    serverId,
-    data: devices.get(serverId),
-    allDevices: Object.fromEntries(devices)
-  });
-
-  return res.status(200).send({ success: true });
-});
 
 /**
  * Gửi toàn bộ servers và devices hiện có sang một target server cụ thể.
@@ -199,25 +141,30 @@ router.post('/api/v1/sync/devices', authMiddleware, (req, res) => {
  * @param {string} accessToken - Bearer token để xác thực với target
  */
 async function syncDataToTarget(url, accessToken) {
-  const headers = { Authorization: `Bearer ${accessToken}` };
+  const headers = { 
+    Authorization: `Bearer ${accessToken}`,
+    'x-sync-forwarded': 'true' // Đánh dấu đây là dữ liệu sync ngang hàng để chặn loop
+  };
 
-  // 1. Gửi danh sách server
-  for (const [id, serverData] of servers.entries()) {
+  // 1. Gửi TẤT CẢ servers trong 1 array
+  if (servers.size > 0) {
+    const serversArray = Array.from(servers.values());
     try {
-      await axios.post(`${url}/api/v1/sync/server`, serverData, { headers, timeout: 5000 });
-      console.log(`[SYNC_DATA] Sent server ${id} to ${url}`);
+      await axios.post(`${url}/api/v1/server`, serversArray, { headers, timeout: 5000 });
+      console.log(`[SYNC_DATA] Sent ${serversArray.length} servers inside 1 array to ${url}`);
     } catch (err) {
-      console.error(`[SYNC_DATA_ERR] Failed to send server ${id} to ${url}: ${err.message}`);
+      console.error(`[SYNC_DATA_ERR] Failed to send servers array to ${url}: ${err.message}`);
     }
   }
 
-  // 2. Gửi danh sách devices
-  for (const [id, devicesData] of devices.entries()) {
+  // 2. Gửi TẤT CẢ devices trong 1 array
+  if (devices.size > 0) {
+    const devicesArray = Array.from(devices.values());
     try {
-      await axios.post(`${url}/api/v1/sync/devices`, devicesData, { headers, timeout: 5000 });
-      console.log(`[SYNC_DATA] Sent devices for server ${id} to ${url}`);
+      await axios.post(`${url}/api/v1/devices`, devicesArray, { headers, timeout: 5000 });
+      console.log(`[SYNC_DATA] Sent ${devicesArray.length} device packages inside 1 array to ${url}`);
     } catch (err) {
-      console.error(`[SYNC_DATA_ERR] Failed to send devices for server ${id} to ${url}: ${err.message}`);
+      console.error(`[SYNC_DATA_ERR] Failed to send devices array to ${url}: ${err.message}`);
     }
   }
 }

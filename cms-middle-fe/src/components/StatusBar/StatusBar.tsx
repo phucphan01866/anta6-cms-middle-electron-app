@@ -118,7 +118,13 @@ export function StatusBar({
         </button>
       )}
 
-      <button onClick={() => console.log('Current Logs:', logs, 'servers :', servers, 'devices: ', devices, 'sendDictionary: ', sendDictionary)} className={` hover:scale-110 transition-scale duration-300 z-1 cursor-pointer right-[3.25rem] bottom-3 absolute rounded-lg p-2 bg-tertiary text-white hover:shadow-md hover:scale-105 transition-all duration-300`} title="Print logs to console">
+      <button onClick={() =>
+        console.log(
+          'Current Logs:', logs,
+          'servers :', servers,
+          'devices: ', devices,
+          'sendDictionary: ', sendDictionary
+        )} className={` hover:scale-110 transition-scale duration-300 z-1 cursor-pointer right-[3.25rem] bottom-3 absolute rounded-lg p-2 bg-tertiary text-white hover:shadow-md hover:scale-105 transition-all duration-300`} title="Print logs to console">
         <Terminal className="w-4 h-4" />
       </button>
 

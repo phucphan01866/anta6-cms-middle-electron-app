@@ -4,6 +4,7 @@ const { connections } = require('../socketState');
 const { notifyStatusToClients, getActiveClients, removeConnection, disconnectClientSocket } = require('../helpers/notify');
 const authMiddleware = require('../middleware/auth.middleware');
 const { syncDataToTarget } = require('./server.routes');
+const { getClientSockets } = require('../socketState');
 
 const router = express.Router();
 
@@ -67,8 +68,6 @@ router.post('/api/v1/create-connection', async (req, res) => {
       }, { timeout: 5000 });
       // getClientSockets().emit('test', loginRes);
 
-      console.log(loginRes)
-
       if (loginRes.data && loginRes.data.success && loginRes.data.data.accessToken) {
         console.log(`[AUTH] Login successful to ${url}`);
         const accessToken = loginRes.data.data.accessToken;
@@ -84,7 +83,6 @@ router.post('/api/v1/create-connection', async (req, res) => {
       }
     } catch (authErr) {
       console.error(`[AUTH_ERROR] Could not login to ${url}: ${authErr}`);
-      // getClientSockets().emit('test', authErr);
       status = 'auth_error';
       removeConnection(url);
     }

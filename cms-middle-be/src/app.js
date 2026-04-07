@@ -92,18 +92,18 @@ app.use((req, res, next) => {
 });
 
 
-// Auto-forward logic cho các route không khai báo trong file này
-app.use(async (req, res, next) => {
-  if (req.method !== 'POST' || declaredRoutes.includes(req.path)) return next();
-  const CMS_BE_URL = getCMSBackendURL();
-  if (!CMS_BE_URL) return res.status(201).send({ success: true });
-  try {
-    const response = await axios.post(`${CMS_BE_URL}${req.originalUrl}`, req.body);
-    return res.status(response.status).send(response.data);
-  } catch {
-    return res.status(201).send({ success: true });
-  }
-});
+// // Auto-forward logic cho các route không khai báo trong file này
+// app.use(async (req, res, next) => {
+//   if (req.method !== 'POST' || declaredRoutes.includes(req.path)) return next();
+//   const CMS_BE_URL = getCMSBackendURL();
+//   if (!CMS_BE_URL) return res.status(201).send({ success: true });
+//   try {
+//     const response = await axios.post(`${CMS_BE_URL}${req.originalUrl}`, req.body);
+//     return res.status(response.status).send(response.data);
+//   } catch {
+//     return res.status(201).send({ success: true });
+//   }
+// });
 
 // ─── Mount Routes ────────────────────────────────────────────────────────────
 app.use(healthRoutes);

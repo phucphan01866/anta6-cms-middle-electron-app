@@ -24,7 +24,6 @@ const setupSocketEvents = () => {
     });
 
     socket.on('disconnect', () => {
-      console.log("socket: ", clientSockets)
       syncClientsToFrontend();
     });
   });
