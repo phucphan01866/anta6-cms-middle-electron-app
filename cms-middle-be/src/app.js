@@ -78,13 +78,18 @@ app.use((req, res, next) => {
     // if (req.headers['accesstoken']) {
     //   console.log(`[${timestamp}] AccessToken Header: ${req.headers['accesstoken']}`);
     // }
-    if (req.originalUrl === '/api/v1/server') {
-      // console.log(req.body);
-    }
-    // console.log(req.originalUrl);
-    if (req.originalUrl === '/api/v1/devices') {
-      // console.log(req.body);
-    }
+    // if (req.originalUrl.includes('/devices') || req.originalUrl.includes('/server')) {
+    //   console.table(
+    //     `[${timestamp}] ${req.method} ${req.originalUrl} -> ${res.statusCode} (${durationMs}ms)${lengthPart}${reqPart}${resPart}`
+    //   );
+    // }
+    // if (req.originalUrl === '/api/v1/server') {
+    //   console.log(`[Sender: ${req.ip}:${req.socket.remotePort}]`, req.body);
+    // }
+    // // console.log(req.originalUrl);
+    // if (req.originalUrl === '/api/v1/devices') {
+    //   // console.log(req.body);
+    // }
   });
 
 

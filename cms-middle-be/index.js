@@ -7,6 +7,7 @@ const { port } = require('./src/config');
 const app = require('./src/app');
 const socketState = require('./src/socketState');
 const setupSocketEvents = require('./src/socketEvents');
+const { startMonitoring } = require('./src/services/check-server.service');
 
 const httpServer = createServer(app);
 
@@ -20,4 +21,7 @@ setupSocketEvents();
 httpServer.listen(port, '0.0.0.0', () => {
   console.log(`\n🚀 MIDDLE SERVER RUNNING AT: http://0.0.0.0:${port}`);
   console.log(`📡 CLIENT SOCKET SERVER READY (PORT ${port})\n`);
-});
+  
+  // Start server monitoring cron job
+  startMonitoring();
+});

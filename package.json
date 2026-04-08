@@ -8,6 +8,7 @@
     "dev:be": "cd cms-middle-be && yarn dev",
     "dev:electron": "wait-on tcp:5050 tcp:5173 && electron .",
     "detect-ip": "node scripts/detect-ip.js",
+    "clean": "node scripts/clear-storage.js",
     "dev": "node scripts/detect-ip.js && concurrently \"yarn dev:be\" \"yarn dev:fe\" \"yarn dev:electron\"",
     "build:fe": "cd cms-middle-fe && yarn build",
     "build": "yarn build:fe && electron-builder"

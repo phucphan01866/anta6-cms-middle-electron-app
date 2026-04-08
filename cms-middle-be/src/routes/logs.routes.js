@@ -57,7 +57,7 @@ async function forwardWithRetry(conn, logData) {
  * @description Receives logs from sources, broadcasts to FE clients, and forwards to registered target servers.
  */
 router.post('/api/v1/logs', async (req, res) => {
-  console.log('received requets from :', req.originalUrl)
+  // console.log('received requets from :', req.originalUrl)  
 
   const clientSockets = getClientSockets();
 
@@ -102,7 +102,6 @@ router.post('/api/v1/logs', async (req, res) => {
     } catch (err) {
       console.error(`  ├─ [FORWARD_FAIL] ${conn.url}: ${err.message}`);
       if (conn.status !== 'error') {
-        conn.status = 'error';
         notifyStatusToClients(conn.url, conn.mode, 'error');
       }
     }

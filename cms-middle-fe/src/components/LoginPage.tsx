@@ -20,8 +20,8 @@ import { socket, updateSocketUrlAsync } from '../socket';
 import { useNavigate } from 'react-router-dom';
 
 const LoginPage: React.FC = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState(import.meta.env.VITE_DEV_ACCOUNT || '');
+  const [password, setPassword] = useState(import.meta.env.VITE_DEV_PASSWORD || '');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -224,12 +224,12 @@ const LoginPage: React.FC = () => {
             </Button>
           </Box>
 
-          <Accordion 
-            sx={{ 
-              width: '100%', 
-              background: 'rgba(15, 23, 42, 0.4)', 
-              color: '#94a3b8', 
-              boxShadow: 'none', 
+          <Accordion
+            sx={{
+              width: '100%',
+              background: 'rgba(15, 23, 42, 0.4)',
+              color: '#94a3b8',
+              boxShadow: 'none',
               border: '1px solid rgba(255, 255, 255, 0.05)',
               borderRadius: '8px !important',
               '&:before': { display: 'none' }
@@ -251,7 +251,7 @@ const LoginPage: React.FC = () => {
             </AccordionSummary>
             <AccordionDetails sx={{ pt: 0, pb: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
               <Box sx={{ display: 'flex', gap: 1 }}>
-                <TextField 
+                <TextField
                   size="small"
                   label="Host IP"
                   value={beHost}
@@ -262,7 +262,7 @@ const LoginPage: React.FC = () => {
                     '& .MuiInputLabel-root': { color: '#94a3b8' }
                   }}
                 />
-                <TextField 
+                <TextField
                   size="small"
                   label="Port"
                   value={bePort}
@@ -274,12 +274,12 @@ const LoginPage: React.FC = () => {
                   }}
                 />
               </Box>
-              <Button 
-                variant="outlined" 
+              <Button
+                variant="outlined"
                 size="small"
                 onClick={handleSaveConnection}
-                sx={{ 
-                  color: '#38bdf8', 
+                sx={{
+                  color: '#38bdf8',
                   borderColor: 'rgba(56, 189, 248, 0.3)',
                   '&:hover': { borderColor: '#38bdf8', background: 'rgba(56, 189, 248, 0.1)' }
                 }}
