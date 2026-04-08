@@ -57,6 +57,8 @@ async function forwardWithRetry(conn, logData) {
  * @description Receives logs from sources, broadcasts to FE clients, and forwards to registered target servers.
  */
 router.post('/api/v1/logs', async (req, res) => {
+  console.log('received requets from :', req.originalUrl)
+
   const clientSockets = getClientSockets();
 
   if (req.body && !req.body.sender_ip) {

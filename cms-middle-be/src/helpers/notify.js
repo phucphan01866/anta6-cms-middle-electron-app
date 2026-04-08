@@ -17,12 +17,11 @@ const notifyStatusToClients = (url = null, mode = 'send', status, data = null) =
   const payload = { url, type: mode, status };
 
   let eventName = status;
-  if (status === 'connected') eventName = 'external-connect';
-  if (status === 'error') eventName = 'external-err-connect';
-  if (status === 'disconnected') eventName = 'external-disconnected';
+  if (status === 'connected') eventName = 'external-server-connect';
+  if (status === 'error') eventName = 'external-server-err-connect';
+  if (status === 'disconnected') eventName = 'external-server-disconnected';
   if (status === 'receive-log') eventName = 'receive-log';
   if (status === 'log-sent') eventName = 'log-sent';
-  if (status === 'update-send-servers') eventName = 'update-send-servers';
 
   clientSockets.emit(eventName, { ...payload, data });
 };
@@ -62,7 +61,7 @@ const getActiveClients = async () => {
 const syncClientsToFrontend = async () => {
   const clientSockets = getClientSockets();
   const clients = await getActiveClients();
-  clientSockets.emit('update-clients', clients);
+  clientSockets.emit('update-client', clients);
 };
 
 const syncConnectionsToFrontend = () => {

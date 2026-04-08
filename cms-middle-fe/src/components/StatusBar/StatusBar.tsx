@@ -19,13 +19,13 @@ function InfoTooltip({ children, content, side = "top" }: { children: React.Reac
 }
 
 export function StatusBar({
-  isConnected, logs, sendDictionary, receiveDictionary, onSave, systemConfig, onSaveSystemConfig, onRemoveConnection, servers, devices
+  isConnected, logs, sendServers, receiveServers, onSave, systemConfig, onSaveSystemConfig, onRemoveConnection, servers, devices
 }: {
   socket: any,
   isConnected: boolean,
   logs: LogData[],
-  sendDictionary: SystemConnection[],
-  receiveDictionary: SystemConnection[],
+  sendServers: SystemConnection[],
+  receiveServers: SystemConnection[],
   systemConfig: SystemConfig;
   servers: Record<string, ServerData>;
   devices: Record<string, DeviceData>;
@@ -37,7 +37,7 @@ export function StatusBar({
   const [isNetworkFormOpen, setIsNetworkFormOpen] = useState(false);
   const [isConfigSystemOpen, setIsConfigSystemOpen] = useState(false);
 
-  const outsideSideClients = sendDictionary.filter(s => s.socketId !== socket.id);
+  const outsideSideClients = sendServers.filter(s => s.socketId !== socket.id);
 
   // Group log stats per device_ip per server
   const deviceLogStats = useMemo(() => {
@@ -123,7 +123,7 @@ export function StatusBar({
           'Current Logs:', logs,
           'servers :', servers,
           'devices: ', devices,
-          'sendDictionary: ', sendDictionary
+          'sendServers: ', sendServers
         )} className={` hover:scale-110 transition-scale duration-300 z-1 cursor-pointer right-[3.25rem] bottom-3 absolute rounded-lg p-2 bg-tertiary text-white hover:shadow-md hover:scale-105 transition-all duration-300`} title="Print logs to console">
         <Terminal className="w-4 h-4" />
       </button>

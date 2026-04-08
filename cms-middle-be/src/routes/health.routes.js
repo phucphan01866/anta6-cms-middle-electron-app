@@ -11,7 +11,10 @@ const router = express.Router();
  * @description Simple health check endpoint.
  * @returns {object} 200 - { status: 'OK' }
  */
-router.get('/healthcheck', (req, res) => res.status(200).send({ status: 'OK' }));
+router.get('/healthcheck', (req, res) => {
+  console.log("healcheck called from ", req.originalUrl)
+  res.status(200).send({ status: 'OK' })
+});
 
 const authMiddleware = require('../middleware/auth.middleware');
 

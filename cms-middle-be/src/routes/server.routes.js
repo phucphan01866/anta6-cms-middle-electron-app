@@ -69,7 +69,7 @@ router.post('/api/v1/server', async (req, res) => {
   }
 
   // Emit toàn bộ servers hiện tại tới FE một lần thay vì nhiều lần
-  clientSockets.emit('receive-server', {
+  clientSockets.emit('receive-server-information', {
     allServers: Object.fromEntries(servers)
   });
 
@@ -103,7 +103,7 @@ router.post('/api/v1/devices', async (req, res) => {
     if (!item) continue;
     const { server, devices: deviceList } = item;
     const serverId = server?.server_id || server?.serial || senderIp;
-    
+
     devices.set(serverId, {
       server,
       devices: deviceList || [],
@@ -114,7 +114,7 @@ router.post('/api/v1/devices', async (req, res) => {
   }
 
   // Emit toàn bộ devices hiện tại tới FE một lần
-  clientSockets.emit('receive-devices', {
+  clientSockets.emit('receive-devices-information', {
     allDevices: Object.fromEntries(devices)
   });
 
@@ -141,7 +141,7 @@ router.post('/api/v1/devices', async (req, res) => {
  * @param {string} accessToken - Bearer token để xác thực với target
  */
 async function syncDataToTarget(url, accessToken) {
-  const headers = { 
+  const headers = {
     Authorization: `Bearer ${accessToken}`,
     'x-sync-forwarded': 'true' // Đánh dấu đây là dữ liệu sync ngang hàng để chặn loop
   };

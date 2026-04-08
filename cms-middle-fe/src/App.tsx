@@ -27,8 +27,8 @@ function Dashboard() {
     devices,
     systemConfig,
     setSystemConfig,
-    sendDictionary,
-    receiveDictionary,
+    sendServers,
+    receiveServers,
     handleAddExternalServer,
     handleRemoveConnection,
     socket
@@ -94,8 +94,8 @@ function Dashboard() {
                 isConnected={isConnected}
                 systemConfig={systemConfig}
                 onSaveSystemConfig={(config) => { setSystemConfig(config) }}
-                sendDictionary={sendDictionary}
-                receiveDictionary={receiveDictionary}
+                sendServers={sendServers}
+                receiveServers={receiveServers}
                 logs={logs}
                 servers={servers}
                 devices={devices}
@@ -148,13 +148,13 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
-      <Route 
-        path="/dashboard" 
+      <Route
+        path="/dashboard"
         element={
           <ProtectedRoute>
             <Dashboard />
           </ProtectedRoute>
-        } 
+        }
       />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
