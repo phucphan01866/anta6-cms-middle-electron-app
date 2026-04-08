@@ -1,4 +1,6 @@
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config(); // Load biến môi trường của BE (cms-middle-be/.env)
+require('dotenv').config({ path: path.join(__dirname, '../.env.generated') }); // Đè các thông số IP/Port chung từ root
 
 const { createServer } = require('http');
 const { port } = require('./src/config');

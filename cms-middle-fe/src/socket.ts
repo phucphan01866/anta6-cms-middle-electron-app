@@ -1,8 +1,9 @@
 import { io } from 'socket.io-client';
 
-const getBeHost = () => localStorage.getItem('BE_HOST') || import.meta.env.VITE_BE_HOST || 'localhost';
+const getBeHost = () => localStorage.getItem('BE_HOST') || import.meta.env.VITE_BE_HOST || '127.0.0.1';
 const getBePort = () => localStorage.getItem('BE_PORT') || import.meta.env.VITE_BE_PORT || '5050';
 const beURL = `http://${getBeHost()}:${getBePort()}`;
+console.log('beurl', beURL);
 
 export const socket = io(beURL, {
   reconnection: true,             // Bật tính năng tự động kết nối lại

@@ -5,6 +5,40 @@ const fs = require('fs');
 
 let mainWindow;
 
+// console.log('Dev server URL:', process.env.VITE_DEV_SERVER_URL); // Vite tự inject
+// console.log('process.env.VITE_HOST', process.env.VITE_HOST);
+// console.log('process.env.VITE_PORT', process.env.VITE_PORT);
+
+const os = require('os');
+
+const SKIP_KEYWORDS = ['Tailscale', 'vEthernet', 'Loopback', 'VMware', 'VirtualBox', 'Pseudo'];
+
+function getLocalIP() {
+  const interfaces = os.networkInterfaces();
+  const candidates = [];
+
+  for (const [name, addrs] of Object.entries(interfaces)) {
+    if (SKIP_KEYWORDS.some(kw => name.includes(kw))) continue;
+    for (const iface of addrs) {
+      if (iface.family === 'IPv4' && !iface.internal) {
+        candidates.push({ name, address: iface.address });
+      }
+    }
+  }
+
+  if (candidates.length === 0) return '127.0.0.1';
+
+  // Ưu tiên Ethernet thực > Wi-Fi > còn lại
+  const preferred =
+    candidates.find(c => /ethernet/i.test(c.name) && !/vethernet/i.test(c.name)) ||
+    candidates.find(c => /wi.fi|wlan|wireless/i.test(c.name)) ||
+    candidates[0];
+
+  return preferred?.address || '127.0.0.1';
+}
+
+console.log(`[Electron] Local IP: ${getLocalIP()}`);
+
 // In dev mode, we assume the backend is started via concurrently or separately.
 // For production mode, we might want to start the backend directly here.
 const isDev = !app.isPackaged;

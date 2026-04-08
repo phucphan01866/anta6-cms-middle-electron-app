@@ -1,5 +1,5 @@
 // ─── CONFIG & URL HELPERS ─────────────────────────────────────────────────────
-const port = process.env.THIS_PORT || 5050;
+const port = process.env.BE_PORT || process.env.THIS_PORT || 5050;
 
 const getURL = (host, p) => (host && p ? `http://${host}:${p}` : null);
 const getCMSBackendURL = () => getURL(process.env.BE_CMS_IP, process.env.BE_CMS_PORT);
