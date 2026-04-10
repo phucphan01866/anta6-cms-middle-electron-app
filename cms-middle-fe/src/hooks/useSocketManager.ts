@@ -137,7 +137,7 @@ export function useSocketManager() {
     });
   };
 
-  const updateSendServers = (ip: string, port: string, status: any) => {
+  const updateSendServers = (ip: string, port: string, status: 'connecting' | 'connected' | 'disconnected') => {
     setSendServers(prev => {
       const idx = prev.findIndex(s => s.ip === ip && s.port === port);
       if (idx !== -1) {
@@ -145,8 +145,6 @@ export function useSocketManager() {
         updated[idx] = { ...updated[idx], status };
         return updated;
       }
-      console.log("updateSendServers", [...prev, { ip, port, status }])
-
       return [...prev, { ip, port, status }];
     });
   };
@@ -175,10 +173,16 @@ export function useSocketManager() {
   }, []);
 
   useEffect(() => {
-    function onConnectedExternalServer(raw: any) {
-      const { url, type, status } = raw;
+    function onConnectingExternalServer(raw: any) {
+      const { url } = raw;
       const parsed = new URL(url);
-      updateSendServers(parsed.hostname, parsed.port, status);
+      updateSendServers(parsed.hostname, parsed.port, 'connecting');
+    }
+
+    function onConnectedExternalServer(raw: any) {
+      const { url } = raw;
+      const parsed = new URL(url);
+      updateSendServers(parsed.hostname, parsed.port, 'connected');
     }
 
     function onLogDispatched() {
@@ -212,20 +216,21 @@ export function useSocketManager() {
     }
 
     function onDisconnectedExternalServer(raw: any) {
-      const { url, type, status } = raw;
-      if (type === 'send') {
+      const { url, type } = raw;
+      if (type === 'send' || !type) {
         const parsed = new URL(url);
-        updateSendServers(parsed.hostname, parsed.port, status);
+        updateSendServers(parsed.hostname, parsed.port, 'disconnected');
       } else {
         updateReceiveServer(raw);
       }
     }
 
     function onErrorExternalServer(raw: any) {
-      const { url, type, status } = raw;
-      if (type === 'send') {
+      // 'error' event is legacy — treat as disconnected
+      const { url, type } = raw;
+      if (type === 'send' || !type) {
         const parsed = new URL(url);
-        updateSendServers(parsed.hostname, parsed.port, status);
+        updateSendServers(parsed.hostname, parsed.port, 'disconnected');
       } else {
         updateReceiveServer(raw);
       }
@@ -279,6 +284,7 @@ export function useSocketManager() {
 
     // Remove unused onUpdateSendServers
 
+    socket.on('external-server-connecting', onConnectingExternalServer);
     socket.on('external-server-connect', onConnectedExternalServer);
     socket.on('external-server-disconnect', onDisconnectedExternalServer);
     socket.on('external-server-err-connect', onErrorExternalServer);
@@ -294,6 +300,7 @@ export function useSocketManager() {
     })
 
     return () => {
+      socket.off('external-server-connecting', onConnectingExternalServer);
       socket.off('external-server-connect', onConnectedExternalServer);
       socket.off('external-server-disconnect', onDisconnectedExternalServer);
       socket.off('external-server-err-connect', onErrorExternalServer);

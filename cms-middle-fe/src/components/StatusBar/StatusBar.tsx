@@ -1,9 +1,10 @@
 import { useState, useMemo } from 'react';
 import type { LogData, SystemConnection, SystemConfig, ServerData, DeviceData } from '../../types';
-import { Plus, Inbox, Activity, Terminal, X, Cpu, MonitorSmartphone, Globe } from 'lucide-react';
+import { Plus, Inbox, Activity, Terminal, Cpu, Globe, Send, Wifi, WifiOff, Loader2 } from 'lucide-react';
 import { AddExternalServer } from '../AddExternalServer';
 import { ConfigSystem } from '../ConfigSystem';
-import { socket } from '../../socket';
+import apiClient from '../../api/apiClient';
+
 
 function InfoTooltip({ children, content, side = "top" }: { children: React.ReactNode, content: string, side?: "top" | "bottom" }) {
   const isBottom = side === "bottom";
@@ -36,8 +37,6 @@ export function StatusBar({
   const [activeTab, setActiveTab] = useState(0);
   const [isNetworkFormOpen, setIsNetworkFormOpen] = useState(false);
   const [isConfigSystemOpen, setIsConfigSystemOpen] = useState(false);
-
-  const outsideSideClients = sendServers.filter(s => s.socketId !== socket.id);
 
   // Group log stats per device_ip per server
   const deviceLogStats = useMemo(() => {
@@ -119,12 +118,17 @@ export function StatusBar({
       )}
 
       <button onClick={() =>
-        console.log(
-          'Current Logs:', logs,
-          'servers :', servers,
-          'devices: ', devices,
-          'sendServers: ', sendServers
-        )} className={` hover:scale-110 transition-scale duration-300 z-1 cursor-pointer right-[3.25rem] bottom-3 absolute rounded-lg p-2 bg-tertiary text-white hover:shadow-md hover:scale-105 transition-all duration-300`} title="Print logs to console">
+        apiClient.get('/show-connections').then((res) => {
+          console.log('res', res.data.connections);
+        })
+        // console.log(
+        //   'Current Logs:', logs, '\n',
+        //   'servers :', servers, '\n',
+        //   'devices: ', devices, '\n',
+        //   'sendServers: ', sendServers, '\n',
+        //   'receiveServers: ', receiveServers, '\n',
+        // )
+      } className={` hover:scale-110 transition-scale duration-300 z-1 cursor-pointer right-[3.25rem] bottom-3 absolute rounded-lg p-2 bg-tertiary text-white hover:shadow-md hover:scale-105 transition-all duration-300`} title="Print logs to console">
         <Terminal className="w-4 h-4" />
       </button>
 
@@ -273,91 +277,16 @@ export function StatusBar({
                 </div>
               )}
 
-              {activeTab === 2 && outsideSideClients.length === 0 && (
+              {activeTab === 2 && sendServers.length === 0 && (
                 <div className="py-10 flex flex-col items-center justify-center opacity-20 gap-2">
                   <Inbox className="w-8 h-8" />
-                  <span className="text-[10px] uppercase font-bold">No active outside client connected</span>
+                  <span className="text-[10px] uppercase font-bold">No send targets configured</span>
                 </div>
               )}
-              {activeTab === 2 && outsideSideClients.length > 0 && (
+              {activeTab === 2 && sendServers.length > 0 && (
                 <div className="grid gap-3">
-                  {outsideSideClients.map((s, idx) => (
-                    <div key={idx} className="bg-surface-container border border-outline-variant/10 px-4 py-2 rounded-sm flex items-center justify-between border-l-4 border-l-primary/50">
-                      <div className="flex items-start gap-4">
-                        <div className="mt-2 flex-shrink-0 w-2 h-2 rounded-full animate-pulse bg-primary shadow-[0_0_8px_rgba(var(--color-primary),0.5)]"></div>
-                        <div className="flex flex-col gap-0.5">
-                          <InfoTooltip content="Loại thiết bị đang kết nối">
-                            <span className="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest">CONNECTING CLIENT</span>
-                          </InfoTooltip>
-                          <div className="flex items-end gap-2">
-                            <InfoTooltip content="IP truy cập">
-                              <span className="text-lg font-black text-on-surface font-mono tracking-tight leading-none">{s.ip}</span>
-                            </InfoTooltip>
-                            <InfoTooltip content="Socket ID (Định danh kết nối ngắn)">
-                              <span className="text-[10px] font-mono opacity-40 mb-0.5">[{s.socketId?.substring(0, 8)}]</span>
-                            </InfoTooltip>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-6">
-                        <button
-                          onClick={async () => {
-                            const beUrl = `http://${systemConfig.be.ip}:${systemConfig.be.port}`;
-                            const targetUrl = `http://${s.ip}:${s.port}`;
-
-                            try {
-                              // 1. Gọi API tới TARGET để xóa connection phía target
-                              console.log(`[REMOVE] Step 1: Calling target ${targetUrl}/api/v1/remove-connection`);
-                              await fetch(`${targetUrl}/api/v1/remove-connection`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ ip: systemConfig.be.ip, port: systemConfig.be.port })
-                              }).then(r => r.json()).then(d => console.log('[REMOVE] Target response:', d))
-                                .catch(e => console.warn('[REMOVE] Target unreachable (may already be down):', e.message));
-
-                              // 2. Gọi API tới BE của mình để kick client socket
-                              console.log(`[REMOVE] Step 2: Disconnecting client ${s.socketId} on our BE`);
-                              const res = await fetch(`${beUrl}/api/v1/disconnect-client`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ socketId: s.socketId })
-                              });
-                              const data = await res.json();
-
-                              if (data.success) {
-                                // 3. Xóa khỏi FE state
-                                console.log(`[REMOVE] Step 3: Removing from FE state`);
-                                onRemoveConnection(s.ip, s.port || '5050', 'send');
-                              } else {
-                                console.error('[REMOVE_FAIL]', data.message);
-                              }
-                            } catch (err) {
-                              console.error('[REMOVE_ERR]', err);
-                            }
-                          }}
-                          className="cursor-pointer w-7 h-7 flex items-center justify-center rounded-full border border-tertiary/30 text-tertiary hover:bg-tertiary/20 hover:border-tertiary transition-all duration-200"
-                          title="Remove connection"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                        <div className="flex flex-col items-end gap-1">
-                          <span className="text-[8px] font-bold text-on-surface-variant uppercase">STATUS</span>
-                          <InfoTooltip content="Trạng thái phân phối dữ liệu (Socket)">
-                            <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-xs font-mono border text-primary bg-primary/10 border-primary/20">CONNECTED</span>
-                          </InfoTooltip>
-                        </div>
-                        <div className="flex flex-col items-end gap-1 border-l border-outline-variant/10 pl-6">
-                          <span className="text-[8px] font-bold text-on-surface-variant uppercase">LOGS PROVIDED</span>
-                          <InfoTooltip content="Tổng lượng Logs đã gửi cho Client này">
-                            <span className="text-[14px] font-black text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-xs flex items-center gap-1.5 font-mono">
-                              <Activity className="w-3 h-3" />
-                              {s.sentCount || 0}
-                            </span>
-                          </InfoTooltip>
-                        </div>
-                      </div>
-                    </div>
+                  {sendServers.map((s, idx) => (
+                    <SendTargetCard key={idx} conn={s} />
                   ))}
                 </div>
               )}
@@ -446,6 +375,72 @@ function DeviceItemRow({
             {logCount} logs
           </span>
         </InfoTooltip>
+      </div>
+    </div>
+  );
+}
+
+function SendTargetCard({ conn }: { conn: SystemConnection }) {
+  const status = conn.status || 'connecting';
+
+  const statusConfig = {
+    connecting: {
+      dot: 'bg-amber-400 ring-amber-400/20',
+      badge: 'text-amber-400 bg-amber-400/10 border-amber-400/30',
+      label: 'CONNECTING',
+      icon: <Loader2 className="w-3 h-3 animate-spin" />,
+      border: 'border-l-amber-400/60',
+    },
+    connected: {
+      dot: 'bg-secondary ring-secondary/20',
+      badge: 'text-secondary bg-secondary/10 border-secondary/30',
+      label: 'CONNECTED',
+      icon: <Wifi className="w-3 h-3" />,
+      border: 'border-l-secondary/60',
+    },
+    disconnected: {
+      dot: 'bg-tertiary ring-tertiary/20',
+      badge: 'text-tertiary bg-tertiary/10 border-tertiary/30',
+      label: 'DISCONNECTED',
+      icon: <WifiOff className="w-3 h-3" />,
+      border: 'border-l-tertiary/60',
+    },
+  } as const;
+
+  const cfg = statusConfig[status] ?? statusConfig.disconnected;
+
+  return (
+    <div className={`bg-surface-container border border-outline-variant/10 px-4 py-3 rounded-sm flex items-center justify-between border-l-4 ${cfg.border} transition-all hover:bg-surface-container-high/30`}>
+      <div className="flex items-start gap-4">
+        <div className={`mt-1.5 flex-shrink-0 w-2 h-2 rounded-full ring-4 ${cfg.dot} ${status === 'connecting' ? 'animate-pulse' : ''}`}></div>
+        <div className="flex flex-col gap-0.5">
+          <span className="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest">SEND TARGET</span>
+          <div className="flex items-end gap-2">
+            <span className="text-lg font-black text-on-surface font-mono tracking-tight leading-none">{conn.ip}</span>
+            <span className="text-[11px] font-mono text-on-surface-variant/60 mb-0.5">:{conn.port}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-4">
+        <div className="flex flex-col items-end gap-1">
+          <span className="text-[8px] font-bold text-on-surface-variant uppercase">LOGS SENT</span>
+          <InfoTooltip content="Tổng Logs đã forward đi">
+            <span className="text-[13px] font-black font-mono text-on-surface flex items-center gap-1">
+              <Send className="w-3 h-3 text-on-surface-variant/50" />
+              {conn.sentCount || 0}
+            </span>
+          </InfoTooltip>
+        </div>
+        <div className="flex flex-col items-end gap-1 border-l border-outline-variant/10 pl-4">
+          <span className="text-[8px] font-bold text-on-surface-variant uppercase">STATUS</span>
+          <InfoTooltip content="Trạng thái kết nối tới server đích">
+            <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-xs font-mono border flex items-center gap-1.5 ${cfg.badge}`}>
+              {cfg.icon}
+              {cfg.label}
+            </span>
+          </InfoTooltip>
+        </div>
       </div>
     </div>
   );

@@ -2,7 +2,9 @@ const express = require('express');
 const axios = require('axios');
 const { getClientSockets, servers, devices, connections } = require('../socketState');
 const { getCMSBackendURL } = require('../config');
+const { notifyStatusToClients } = require('../helpers/notify');
 const authMiddleware = require('../middleware/auth.middleware');
+
 
 const router = express.Router();
 
@@ -24,6 +26,10 @@ async function forwardToSendTargets(endpoint, data) {
 
     try {
       await sendRequest(conn.accessToken);
+      if (conn.status !== 'connected') {
+        conn.status = 'connected';
+        notifyStatusToClients(conn.url, conn.mode, 'connected');
+      }
     } catch (err) {
       if (err.response && err.response.status === 401) {
         try {
@@ -35,12 +41,25 @@ async function forwardToSendTargets(endpoint, data) {
           if (loginRes.data && loginRes.data.success && loginRes.data.data.accessToken) {
             conn.accessToken = loginRes.data.data.accessToken;
             await sendRequest(conn.accessToken);
+            if (conn.status !== 'connected') {
+              conn.status = 'connected';
+              notifyStatusToClients(conn.url, conn.mode, 'connected');
+            }
+          } else {
+            conn.status = 'disconnected';
+            notifyStatusToClients(conn.url, conn.mode, 'disconnected');
           }
         } catch (loginErr) {
           console.error(`[FORWARD_AUTH_RETRY_FAIL] ${conn.url}: ${loginErr.message}`);
+          conn.status = 'disconnected';
+          notifyStatusToClients(conn.url, conn.mode, 'disconnected');
         }
       } else {
         console.error(`[FORWARD_FAIL] ${endpoint} to ${conn.url}: ${err.message}`);
+        if (conn.status !== 'disconnected') {
+          conn.status = 'disconnected';
+          notifyStatusToClients(conn.url, conn.mode, 'disconnected');
+        }
       }
     }
   }

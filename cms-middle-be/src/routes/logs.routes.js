@@ -101,8 +101,9 @@ router.post('/api/v1/logs', async (req, res) => {
       }
     } catch (err) {
       console.error(`  ├─ [FORWARD_FAIL] ${conn.url}: ${err.message}`);
-      if (conn.status !== 'error') {
-        notifyStatusToClients(conn.url, conn.mode, 'error');
+      if (conn.status !== 'disconnected') {
+        conn.status = 'disconnected';
+        notifyStatusToClients(conn.url, conn.mode, 'disconnected');
       }
     }
   }

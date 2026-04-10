@@ -1,7 +1,7 @@
 export interface SystemConnection {
   ip: string;
   port: string;
-  status?: 'connected' | 'connecting' | 'disconnected' | 'error' | 'auto - connected';
+  status?: 'connecting' | 'connected' | 'disconnected';
   server_id?: string;
   sentCount?: number;
   receivedCount?: number;

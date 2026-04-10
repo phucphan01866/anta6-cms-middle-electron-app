@@ -17,6 +17,7 @@ const notifyStatusToClients = (url = null, mode = 'send', status, data = null) =
   const payload = { url, type: mode, status };
 
   let eventName = status;
+  if (status === 'connecting') eventName = 'external-server-connecting';
   if (status === 'connected') eventName = 'external-server-connect';
   if (status === 'error') eventName = 'external-server-err-connect';
   if (status === 'disconnected') eventName = 'external-server-disconnected';

@@ -1,10 +1,10 @@
 const express = require('express');
 const axios = require('axios');
 const { connections } = require('../socketState');
-const { notifyStatusToClients, getActiveClients, removeConnection, disconnectClientSocket } = require('../helpers/notify');
+const { notifyStatusToClients, getActiveClients, removeConnection, disconnectClientSocket, syncConnectionsToFrontend } = require('../helpers/notify');
 const authMiddleware = require('../middleware/auth.middleware');
 const { syncDataToTarget } = require('./server.routes');
-const { getClientSockets } = require('../socketState');
+
 
 const router = express.Router();
 
@@ -40,7 +40,6 @@ router.post('/api/v1/disconnect-client', async (req, res) => {
  */
 router.post('/api/v1/create-connection', async (req, res) => {
   const { ip, port, mode } = req.body;
-  // console.log("create-connection to ", ip, port, mode);
   if (!ip || !port) return res.status(400).send({ success: false, message: 'Missing IP or Port' });
 
   const url = `http://${ip}:${port}`;
@@ -50,50 +49,60 @@ router.post('/api/v1/create-connection', async (req, res) => {
   }
 
   const connMode = mode || 'send';
-  let status = 'registered';
 
-  // Kiểm tra target server có online không bằng healthcheck
+  // Thêm vào connections ngay lập tức với trạng thái 'connecting'
+  // Trạng thái 'connecting' chỉ xuất hiện lần đầu, trước khi có kết quả login
+  const connEntry = { url, ip, port, mode: connMode, status: 'connecting', server_id: 'PENDING', receivedCount: 0, sentCount: 0 };
+  connections.push(connEntry);
+  notifyStatusToClients(url, connMode, 'connecting');
+
+  // Trả về response ngay để FE không bị block
+  res.status(200).send({ success: true, message: `Registered ${url} (status: connecting)`, ip, port, status: 'connecting' });
+
+  // Thực hiện healthcheck + login bất đồng bộ
+  const adminEmail = process.env.ADMIN_EMAIL || 'admin@cms.com';
+  const adminPass = process.env.ADMIN_PASSWORD || 'admin1234';
+
   try {
     await axios.get(`${url}/healthcheck`, { timeout: 3000 });
-    status = 'connected';
 
-    // THỰC HIỆN LOGIN ĐỂ LẤY TOKEN
+    // Healthcheck OK → thử login
     try {
-      const adminEmail = process.env.ADMIN_EMAIL || 'admin@cms.com';
-      const adminPass = process.env.ADMIN_PASSWORD || 'admin1234';
-
       const loginRes = await axios.post(`${url}/api/v1/login`, {
         email: adminEmail,
         password: adminPass
       }, { timeout: 5000 });
-      // getClientSockets().emit('test', loginRes);
 
       if (loginRes.data && loginRes.data.success && loginRes.data.data.accessToken) {
         console.log(`[AUTH] Login successful to ${url}`);
-        const accessToken = loginRes.data.data.accessToken;
-        connections.push({ url, ip, port, mode: connMode, status, server_id: 'PENDING', receivedCount: 0, sentCount: 0, accessToken });
+        connEntry.accessToken = loginRes.data.data.accessToken;
+        connEntry.status = 'connected';
+        notifyStatusToClients(url, connMode, 'connected');
+        syncConnectionsToFrontend();
 
         // Tự động đồng bộ dữ liệu nếu là mode 'send'
         if (connMode === 'send') {
-          syncDataToTarget(url, accessToken);
+          syncDataToTarget(url, connEntry.accessToken);
         }
       } else {
-        console.warn(`[AUTH_WARN] Login to ${url} failed or returned no token`);
-        connections.push({ url, ip, port, mode: connMode, status, server_id: 'PENDING', receivedCount: 0, sentCount: 0 });
+        console.warn(`[AUTH_WARN] Login to ${url} returned no token`);
+        connEntry.status = 'disconnected';
+        notifyStatusToClients(url, connMode, 'disconnected');
+        syncConnectionsToFrontend();
       }
     } catch (authErr) {
-      console.error(`[AUTH_ERROR] Could not login to ${url}: ${authErr}`);
-      status = 'auth_error';
-      removeConnection(url);
+      console.error(`[AUTH_ERROR] Could not login to ${url}: ${authErr.message}`);
+      connEntry.status = 'disconnected';
+      notifyStatusToClients(url, connMode, 'disconnected');
+      syncConnectionsToFrontend();
     }
   } catch {
-    status = 'unreachable';
-    connections.push({ url, ip, port, mode: connMode, status, server_id: 'PENDING', receivedCount: 0, sentCount: 0 });
+    // Healthcheck thất bại
+    console.warn(`[HEALTHCHECK_FAIL] ${url} is unreachable`);
+    connEntry.status = 'disconnected';
+    notifyStatusToClients(url, connMode, 'disconnected');
+    syncConnectionsToFrontend();
   }
-  // getClientSockets().emit('test', connections);
-  notifyStatusToClients(url, connMode, status === 'connected' ? 'connected' : 'error');
-
-  return res.status(200).send({ success: true, message: `Registered ${url} (status: ${status})`, ip, port, status });
 });
 
 
@@ -139,6 +148,11 @@ router.get('/api/v1/reset-all', async (req, res) => {
   // Trigger lại event để FE update trắng màn hình
   const { syncConnectionsToFrontend } = require('../helpers/notify');
   if (syncConnectionsToFrontend) syncConnectionsToFrontend();
-  
+
   return res.status(200).send({ success: true, message: 'Reset all connections' });
+});
+
+router.get('/show-connections', (req, res) => {
+  console.log('connections', connections);
+  return res.status(200).send({ success: true, message: 'Connections', connections });
 });
