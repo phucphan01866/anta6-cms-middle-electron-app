@@ -1,7 +1,7 @@
 const express = require('express');
 const axios = require('axios');
 const { connections } = require('../socketState');
-const { notifyStatusToClients, getActiveClients, removeConnection, disconnectClientSocket, syncConnectionsToFrontend } = require('../helpers/notify');
+const { notifyStatusToClients, getActiveClients, removeConnection, disconnectClientSocket, syncConnectionsToFrontend, pingUrl } = require('../helpers/notify');
 const authMiddleware = require('../middleware/auth.middleware');
 const { syncDataToTarget } = require('./server.routes');
 
@@ -105,6 +105,62 @@ router.post('/api/v1/create-connection', async (req, res) => {
   }
 });
 
+router.post('/api/v1/reconnect-connection', async (req, res) => {
+  const { ip, port } = req.body;
+  if (!ip || !port) return res.status(400).send({ success: false, message: 'Missing IP or Port' });
+
+  const url = `http://${ip}:${port}`;
+  const existing = connections.find(c => c.url === url);
+
+  if (!existing) {
+    return res.status(404).send({ success: false, message: 'Connection not found' });
+  }
+
+  // Chuyển sang connecting ngay để FE hiện spinner
+  existing.status = 'connecting';
+  notifyStatusToClients(url, existing.mode, 'connecting');
+  syncConnectionsToFrontend();
+
+  // Trả về response trước, xử lý login bất đồng bộ phía sau
+  res.status(200).send({ success: true, message: 'Reconnecting...' });
+
+  const adminEmail = process.env.ADMIN_EMAIL || 'admin@cms.com';
+  const adminPass = process.env.ADMIN_PASSWORD || 'admin1234';
+
+  try {
+    // 1. Healthcheck trước
+    await axios.get(`${url}/healthcheck`, { timeout: 3000 });
+
+    // 2. Login để lấy token mới
+    try {
+      const loginRes = await axios.post(`${url}/api/v1/login`, {
+        email: adminEmail,
+        password: adminPass
+      }, { timeout: 5000 });
+
+      if (loginRes.data && loginRes.data.success && loginRes.data.data.accessToken) {
+        console.log(`[RECONNECT] Login successful to ${url}`);
+        existing.accessToken = loginRes.data.data.accessToken;
+        existing.status = 'connected';
+        notifyStatusToClients(url, existing.mode, 'connected');
+      } else {
+        console.warn(`[RECONNECT] Login to ${url} returned no token`);
+        existing.status = 'disconnected';
+        notifyStatusToClients(url, existing.mode, 'disconnected');
+      }
+    } catch (authErr) {
+      console.error(`[RECONNECT] Login failed to ${url}: ${authErr.message}`);
+      existing.status = 'disconnected';
+      notifyStatusToClients(url, existing.mode, 'disconnected');
+    }
+  } catch {
+    console.warn(`[RECONNECT] Healthcheck failed for ${url}`);
+    existing.status = 'disconnected';
+    notifyStatusToClients(url, existing.mode, 'disconnected');
+  }
+
+  syncConnectionsToFrontend();
+})
 
 // Xóa connection khỏi danh sách
 /**
@@ -141,23 +197,3 @@ router.get('/api/v1/connections', async (req, res) => {
 });
 
 module.exports = router;
-
-router.get('/api/v1/reset-all', async (req, res) => {
-  connections.splice(0, connections.length); // Xóa mảng an toàn
-
-  // Trigger lại event để FE update trắng màn hình
-  const { syncConnectionsToFrontend } = require('../helpers/notify');
-  if (syncConnectionsToFrontend) syncConnectionsToFrontend();
-
-  return res.status(200).send({ success: true, message: 'Reset all connections' });
-});
-
-router.get('/show-connections', (req, res) => {
-  console.log('connections', connections);
-  return res.status(200).send({ success: true, message: 'Connections', connections });
-});
-
-router.get('/test', async (req, res) => {
-  console.log(connections)
-  return res.status(200).send({ success: true, sendTargets: connections });
-})

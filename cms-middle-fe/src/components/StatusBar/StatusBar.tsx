@@ -394,9 +394,13 @@ function SendTargetCard({ conn }: { conn: SystemConnection }) {
     // TODO: Implement actual removal logic
   };
 
-  const handleReconnect = () => {
+  const handleReconnect = async () => {
     console.log('[DEBUG] reconnect for:', conn.ip);
-    // TODO: Implement actual reconnection logic
+    // Gọi API -> BE sẽ bắn socket event -> useSocketManager cập nhật sendServers -> conn.status tự thay đổi
+    await apiClient.post('/api/v1/reconnect-connection', {
+      ip: conn.ip,
+      port: conn.port,
+    });
   };
 
   const statusConfig = {

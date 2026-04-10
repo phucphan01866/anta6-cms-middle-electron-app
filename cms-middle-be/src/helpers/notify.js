@@ -119,6 +119,16 @@ const disconnectClientSocket = async (socketId) => {
   return { success: true, message: `Disconnected ${socketId}` };
 };
 
+
+async function pingUrl(url, timeout = 2000) {
+  try {
+    const res = await axios.get(`${url}/healthcheck`, { timeout });
+    return res.status === 200;
+  } catch (err) {
+    return false;
+  }
+}
+
 module.exports = {
   notifyStatusToClients,
   getActiveClients,
@@ -126,4 +136,5 @@ module.exports = {
   syncConnectionsToFrontend,
   removeConnection,
   disconnectClientSocket,
+  pingUrl
 };

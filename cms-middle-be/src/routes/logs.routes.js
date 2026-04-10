@@ -80,7 +80,7 @@ router.post('/api/v1/logs', async (req, res) => {
   // Track receivedCount và server_id
   const senderIp = (req.ip || '').replace('::ffff:', '');
   connections.forEach(entry => {
-    console.log('entry still work', entry)
+    // console.log('entry still work', entry)
     if (entry.ip === senderIp) {
       entry.receivedCount = (entry.receivedCount || 0) + 1;
       if ((!entry.server_id || entry.server_id === 'PENDING') && req.body?.server?.server_id) {
@@ -109,13 +109,9 @@ router.post('/api/v1/logs', async (req, res) => {
     }
   }
 
-  // chuyển thằng này xuống?
-  // clientSockets.emit('log-dispatched', { timestamp: logData.timestamp });
   clientSockets.emit('log-dispatched', { timestamp: logData.timestamp, sentServerList });
 
   return res.status(200).send({ success: true });
 });
-
-
 
 module.exports = router;
