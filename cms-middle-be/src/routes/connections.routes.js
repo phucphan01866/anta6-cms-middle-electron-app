@@ -156,3 +156,8 @@ router.get('/show-connections', (req, res) => {
   console.log('connections', connections);
   return res.status(200).send({ success: true, message: 'Connections', connections });
 });
+
+router.get('/test', async (req, res) => {
+  console.log(connections)
+  return res.status(200).send({ success: true, sendTargets: connections });
+})

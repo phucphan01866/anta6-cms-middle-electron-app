@@ -76,11 +76,11 @@ router.post('/api/v1/logs', async (req, res) => {
 
   // 1. Phát dữ liệu cho các Client của mình (Frontend) qua Socket.IO
   clientSockets.emit('receive-log', logData);
-  clientSockets.emit('log-dispatched', { timestamp: logData.timestamp });
 
   // Track receivedCount và server_id
   const senderIp = (req.ip || '').replace('::ffff:', '');
   connections.forEach(entry => {
+    console.log('entry still work', entry)
     if (entry.ip === senderIp) {
       entry.receivedCount = (entry.receivedCount || 0) + 1;
       if ((!entry.server_id || entry.server_id === 'PENDING') && req.body?.server?.server_id) {
@@ -89,12 +89,13 @@ router.post('/api/v1/logs', async (req, res) => {
     }
   });
 
-  // 2. Forward log tới các target server đã đăng ký (mode === 'send') qua HTTP POST
-  const sendTargets = connections.filter(c => c.mode === 'send');
+  const sendTargets = connections.filter(c => c.mode === 'send').filter(c => c.status === 'connected');
+  let sentServerList = []
   for (const conn of sendTargets) {
     try {
       await forwardWithRetry(conn, req.body);
       conn.sentCount = (conn.sentCount || 0) + 1;
+      sentServerList.push(conn.url)
       if (conn.status !== 'connected') {
         conn.status = 'connected';
         notifyStatusToClients(conn.url, conn.mode, 'connected');
@@ -107,6 +108,10 @@ router.post('/api/v1/logs', async (req, res) => {
       }
     }
   }
+
+  // chuyển thằng này xuống?
+  // clientSockets.emit('log-dispatched', { timestamp: logData.timestamp });
+  clientSockets.emit('log-dispatched', { timestamp: logData.timestamp, sentServerList });
 
   return res.status(200).send({ success: true });
 });

@@ -1,9 +1,11 @@
 import { useState, useMemo } from 'react';
 import type { LogData, SystemConnection, SystemConfig, ServerData, DeviceData } from '../../types';
-import { Plus, Inbox, Activity, Terminal, Cpu, Globe, Send, Wifi, WifiOff, Loader2 } from 'lucide-react';
+import { Plus, Inbox, Activity, Terminal, Cpu, Globe, Send, Wifi, WifiOff, Loader2, ChevronDown, RefreshCw, Trash2 } from 'lucide-react';
 import { AddExternalServer } from '../AddExternalServer';
 import { ConfigSystem } from '../ConfigSystem';
 import apiClient from '../../api/apiClient';
+import { socket } from '../../socket';
+import axios from 'axios';
 
 
 function InfoTooltip({ children, content, side = "top" }: { children: React.ReactNode, content: string, side?: "top" | "bottom" }) {
@@ -136,6 +138,8 @@ export function StatusBar({
         <AddExternalServer
           onClose={() => setIsNetworkFormOpen(false)}
           onSave={onSave}
+          initialIp={import.meta.env.VITE_DEV_FORWARD_IP}
+          initialPort={import.meta.env.VITE_DEV_FORWARD_PORT}
           initialMode={activeTab === 1 ? 'receive' : 'send'}
         />
       )}
@@ -381,7 +385,19 @@ function DeviceItemRow({
 }
 
 function SendTargetCard({ conn }: { conn: SystemConnection }) {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const status = conn.status || 'connecting';
+
+  const handleRemoveConnection = () => {
+    console.log('[DEBUG] remove-connection for:', conn.ip);
+    setIsMenuOpen(false);
+    // TODO: Implement actual removal logic
+  };
+
+  const handleReconnect = () => {
+    console.log('[DEBUG] reconnect for:', conn.ip);
+    // TODO: Implement actual reconnection logic
+  };
 
   const statusConfig = {
     connecting: {
@@ -393,14 +409,14 @@ function SendTargetCard({ conn }: { conn: SystemConnection }) {
     },
     connected: {
       dot: 'bg-secondary ring-secondary/20',
-      badge: 'text-secondary bg-secondary/10 border-secondary/30',
+      badge: 'text-secondary bg-secondary/10 border-secondary/30 hover:bg-secondary/20 cursor-pointer',
       label: 'CONNECTED',
       icon: <Wifi className="w-3 h-3" />,
       border: 'border-l-secondary/60',
     },
     disconnected: {
       dot: 'bg-tertiary ring-tertiary/20',
-      badge: 'text-tertiary bg-tertiary/10 border-tertiary/30',
+      badge: 'text-tertiary bg-tertiary/10 border-tertiary/30 hover:bg-tertiary/20 cursor-pointer',
       label: 'DISCONNECTED',
       icon: <WifiOff className="w-3 h-3" />,
       border: 'border-l-tertiary/60',
@@ -425,23 +441,63 @@ function SendTargetCard({ conn }: { conn: SystemConnection }) {
       <div className="flex items-center gap-4">
         <div className="flex flex-col items-end gap-1">
           <span className="text-[8px] font-bold text-on-surface-variant uppercase">LOGS SENT</span>
-          <InfoTooltip content="Tổng Logs đã forward đi">
-            <span className="text-[13px] font-black font-mono text-on-surface flex items-center gap-1">
-              <Send className="w-3 h-3 text-on-surface-variant/50" />
-              {conn.sentCount || 0}
-            </span>
-          </InfoTooltip>
+          <span className="text-[13px] font-black font-mono text-on-surface flex items-center gap-1">
+            <Send className="w-3 h-3 text-on-surface-variant/50" />
+            <button onClick={() => apiClient.get('/test').then(res => console.log(res))}>{conn.sentCount || 0}</button>
+          </span>
         </div>
-        <div className="flex flex-col items-end gap-1 border-l border-outline-variant/10 pl-4">
+
+        <div className="flex flex-col items-end gap-1 border-l border-outline-variant/10 pl-4 relative">
           <span className="text-[8px] font-bold text-on-surface-variant uppercase">STATUS</span>
-          <InfoTooltip content="Trạng thái kết nối tới server đích">
+
+          {status === 'connected' ? (
+            <div className="relative">
+              <button
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-xs font-mono border flex items-center gap-1.5 transition-colors ${cfg.badge}`}
+              >
+                {cfg.icon}
+                {cfg.label}
+                <ChevronDown className={`w-3 h-3 transition-transform ${isMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {isMenuOpen && (
+                <div className="absolute right-0 top-full mt-1 z-50 bg-surface-container-high border border-outline-variant shadow-xl rounded-md min-w-[140px] overflow-hidden animate-in fade-in zoom-in duration-200">
+                  <button
+                    onClick={handleRemoveConnection}
+                    className="w-full text-left px-3 py-2 text-[10px] font-bold text-tertiary hover:bg-tertiary/10 flex items-center gap-2 transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    REMOVE CONNECTION
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : status === 'disconnected' ? (
+            <InfoTooltip content="Kết nối lại" side="top">
+              <button
+                onClick={handleReconnect}
+                className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-xs font-mono border flex items-center gap-1.5 transition-colors ${cfg.badge}`}
+              >
+                <RefreshCw className="w-3 h-3" />
+                {cfg.label}
+              </button>
+            </InfoTooltip>
+          ) : (
             <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-xs font-mono border flex items-center gap-1.5 ${cfg.badge}`}>
               {cfg.icon}
               {cfg.label}
             </span>
-          </InfoTooltip>
+          )}
         </div>
       </div>
+
+      {isMenuOpen && (
+        <div
+          className="fixed inset-0 z-40"
+          onClick={() => setIsMenuOpen(false)}
+        ></div>
+      )}
     </div>
   );
 }

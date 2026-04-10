@@ -107,7 +107,7 @@ export function useSocketManager() {
           server_id: serverId,
           ip: sourceIp,
           port: '5588',
-          status: 'auto - connected',
+          status: 'connected',
           receivedCount: isLogEvent ? 1 : 0
         };
         return [...prev, newServer];
@@ -125,7 +125,7 @@ export function useSocketManager() {
       if (raw.status) {
         server.status = raw.status;
       } else if (!isDisconnectOrError && !server.status) {
-        server.status = 'auto - connected';
+        server.status = 'connected';
       }
 
       if (isLogEvent) {
@@ -185,11 +185,17 @@ export function useSocketManager() {
       updateSendServers(parsed.hostname, parsed.port, 'connected');
     }
 
-    function onLogDispatched() {
-      setSendServers(prev => prev.map(s => ({
-        ...s,
-        sentCount: (s.sentCount || 0) + 1
-      })));
+    function onLogDispatched(raw: any) {
+      const { sentServerList } = raw;
+      setSendServers(prev => prev.map(s => {
+        if (sentServerList.includes('http://' + s.ip + ':' + s.port)) {
+          return {
+            ...s,
+            sentCount: (s.sentCount || 0) + 1
+          };
+        }
+        return s;
+      }));
     }
 
     function onUpdateConnections(data: { sendList: SystemConnection[], receiveList: SystemConnection[] }) {
