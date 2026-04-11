@@ -45,15 +45,20 @@ const isDev = !app.isPackaged;
 let backendProcess = null;
 
 function startBackend() {
-  const bePath = path.join(__dirname, 'cms-middle-be', 'index.js');
-  if (fs.existsSync(bePath)) {
-    console.log('[Electron] Starting Backend...', bePath);
-    // require(bePath); // Alternatively, you can just require it if it's safe to run in the main process
-    backendProcess = spawn('node', [bePath], { cwd: path.join(__dirname, 'cms-middle-be') });
+  const osPlatform = os.platform();
+  const beExecutableName = osPlatform === 'win32' ? 'cms-ai-vms-middle.exe' : 'cms-ai-vms-middle';
+
+  const binaryPath = isDev
+    ? path.join(__dirname, 'build-be', beExecutableName)
+    : path.join(process.resourcesPath, 'bin', beExecutableName);
+
+  if (fs.existsSync(binaryPath)) {
+    console.log('[Electron] Starting Backend Sidecar...', binaryPath);
+    backendProcess = spawn(binaryPath, [], { cwd: path.dirname(binaryPath) });
     backendProcess.stdout.on('data', (data) => console.log(`[BE]: ${data}`));
     backendProcess.stderr.on('data', (data) => console.error(`[BE ERROR]: ${data}`));
   } else {
-    console.error('[Electron] Backend index.js not found at', bePath);
+    console.error('[Electron] Backend sidecar not found at', binaryPath);
   }
 }
 

@@ -9,9 +9,10 @@
     "dev:electron": "wait-on tcp:5050 tcp:5173 && electron .",
     "detect-ip": "node scripts/detect-ip.js",
     "clean": "node scripts/clear-storage.js",
-    "dev": "node scripts/detect-ip.js && concurrently \"yarn dev:be\" \"yarn dev:fe\" \"yarn dev:electron\"",
+    "dev": "node scripts/detect-ip.js && concurrently --kill-others \"yarn dev:be\" \"yarn dev:fe\" \"yarn dev:electron\"",
     "build:fe": "cd cms-middle-fe && yarn build",
-    "build": "yarn build:fe && electron-builder"
+    "build:be": "cd cms-middle-be && yarn build",
+    "build": "yarn build:fe && yarn build:be && electron-builder"
   },
   "dependencies": {},
   "devDependencies": {
@@ -29,8 +30,16 @@
     "files": [
       "main.js",
       "preload.js",
-      "cms-middle-be/**/*",
       "cms-middle-fe/dist/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "build-be",
+        "to": "bin",
+        "filter": [
+          "**/*"
+        ]
+      }
     ],
     "win": {
       "target": "nsis"

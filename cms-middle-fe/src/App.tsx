@@ -3,8 +3,9 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { StatusBar } from './components/StatusBar/StatusBar';
 import { LogPopup } from './components/LogPopup';
 import { useSocketManager } from './hooks/useSocketManager';
-import { SlidersHorizontal, Terminal, Check, Cpu, MonitorSmartphone } from 'lucide-react';
+import { SlidersHorizontal, Terminal, Check, Cpu, MonitorSmartphone, Camera } from 'lucide-react';
 import { LogEntry } from './components/LogEntry';
+import { CameraFeed } from './components/CameraFeed';
 import type { LogData, ServerData, DeviceData } from './types';
 import LoginPage from './components/LoginPage';
 import { authApi } from './api/authApi';
@@ -61,11 +62,10 @@ function LogFilter({
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(v => !v)}
-        className={`flex items-center gap-1.5 px-2 py-1 rounded-md transition-all duration-200 group border ${
-          activeCount > 0
+        className={`flex items-center gap-1.5 px-2 py-1 rounded-md transition-all duration-200 group border ${activeCount > 0
             ? 'border-primary/40 bg-primary/10 text-primary'
             : 'border-transparent hover:border-outline-variant/30 text-on-surface-variant hover:text-primary'
-        }`}
+          }`}
       >
         <SlidersHorizontal className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
         {activeCount > 0 && (
@@ -97,9 +97,8 @@ function LogFilter({
                       onClick={() => onToggleServer(id)}
                       className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-surface-container transition-colors w-full text-left"
                     >
-                      <div className={`w-3.5 h-3.5 rounded-sm border-2 flex items-center justify-center shrink-0 transition-colors ${
-                        checked ? 'bg-secondary border-secondary' : 'border-outline-variant'
-                      }`}>
+                      <div className={`w-3.5 h-3.5 rounded-sm border-2 flex items-center justify-center shrink-0 transition-colors ${checked ? 'bg-secondary border-secondary' : 'border-outline-variant'
+                        }`}>
                         {checked && <Check className="w-2.5 h-2.5 text-white stroke-[3]" />}
                       </div>
                       <span className="text-[11px] font-semibold text-on-surface truncate">{srv.server_name || id}</span>
@@ -131,9 +130,8 @@ function LogFilter({
                       onClick={() => onToggleDevice(dev.ip)}
                       className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-surface-container transition-colors w-full text-left"
                     >
-                      <div className={`w-3.5 h-3.5 rounded-sm border-2 flex items-center justify-center shrink-0 transition-colors ${
-                        checked ? 'bg-tertiary border-tertiary' : 'border-outline-variant'
-                      }`}>
+                      <div className={`w-3.5 h-3.5 rounded-sm border-2 flex items-center justify-center shrink-0 transition-colors ${checked ? 'bg-tertiary border-tertiary' : 'border-outline-variant'
+                        }`}>
                         {checked && <Check className="w-2.5 h-2.5 text-white stroke-[3]" />}
                       </div>
                       <span className="text-[11px] font-semibold text-on-surface truncate">{dev.name}</span>
@@ -201,17 +199,16 @@ function Dashboard() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Surveillance Grid commented — latestCameras disabled
-  // const latestCameras = useMemo(() => {
-  //   const camMap = new Map<string, LogData>();
-  //   logs.forEach(log => {
-  //     const key = `${log.ip}-${log.device_ip}`;
-  //     if (!camMap.has(key)) {
-  //       camMap.set(key, log);
-  //     }
-  //   });
-  //   return Array.from(camMap.values()).slice(0, 6);
-  // }, [logs]);
+  const latestCameras = useMemo(() => {
+    const camMap = new Map<string, LogData>();
+    logs.forEach(log => {
+      const key = `${log.ip}-${log.device_ip}`;
+      if (!camMap.has(key)) {
+        camMap.set(key, log);
+      }
+    });
+    return Array.from(camMap.values()).slice(0, 6);
+  }, [logs]);
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-background text-on-surface font-sans selection:bg-primary/30 antialiased">
@@ -220,7 +217,6 @@ function Dashboard() {
         <div className="col-span-3 grid grid-rows-[1fr_0fr] overflow-hidden bg-background h-full border-r border-outline-variant/20">
 
           <div className="flex flex-col overflow-hidden h-full">
-            {/* ── Surveillance Grid (Temporarily Commented) ──
             <div className="p-4 flex items-center gap-2 border-b border-outline-variant/10 shrink-0">
               <Camera className="w-4 h-4 text-primary" />
               <h2 className="text-[10px] font-bold tracking-[0.2em] uppercase text-on-surface">Surveillance Grid</h2>
@@ -240,7 +236,6 @@ function Dashboard() {
                 </div>
               )}
             </div>
-            ── End Surveillance Grid ── */}
             <div className="shrink-0">
               <StatusBar
                 socket={socket}

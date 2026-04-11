@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { socket, updateSocketUrlAsync } from '../socket';
 import type { LogData, SystemConnection, SystemConfig, ServerData, DeviceData } from '../types';
 import apiClient from '../api/apiClient';
+import axios from 'axios';
 
 
 export function useSocketManager() {
@@ -152,16 +153,28 @@ export function useSocketManager() {
   const handleAddExternalServer = async (ip: string, port: string, mode: 'receive' | 'send') => {
     console.log(`[SYNC_INIT] Requesting local BE to connect to http://${ip}:${port} (${mode})`);
 
-    // GỌI ĐẾN BE CỦA MÌNH ĐỂ THỰC HIỆN KẾT NỐI ĐẾN SERVER ĐÍCH
-    apiClient.post(`/api/v1/create-connection`, { ip, port, mode })
-      .then((res: any) => {
-        console.log(`[SYNC_SUCCESS] Backend response:`, res.data);
-        // Sau khi tạo connection thành công → fetch lại full list từ BE
-        fetchConnections();
-      })
-
-      .catch((err: any) => console.error(`[SYNC_ERROR] Failed to initiate sync:`, err));
-
+    if (mode === 'send') {
+      // GỌI ĐẾN BE CỦA MÌNH ĐỂ THỰC HIỆN KẾT NỐI ĐẾN SERVER ĐÍCH
+      apiClient.post(`/api/v1/create-connection`, { ip, port, mode })
+        .then((res: any) => {
+          console.log(`[SYNC_SUCCESS] Backend response:`, res.data);
+          // Sau khi tạo connection thành công → fetch lại full list từ BE
+          fetchConnections();
+        })
+        .catch((err: any) => console.error(`[SYNC_ERROR] Failed to initiate sync:`, err));
+    } else if (mode === 'receive') {
+      // GỌI ĐẾN BE CỦA IP:PORT ĐỂ ĐÍCH KẾT NỐI ĐẾN SERVER HIỆN TẠI
+      axios.post(`http://${ip}:${port}/api/v1/create-connection`, 
+        { ip: systemConfig.be.ip, port: systemConfig.be.port, mode: 'send' },
+        { headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` } }
+      )
+        .then((res: any) => {
+          console.log(`[SYNC_SUCCESS] Target backend response:`, res.data);
+          // Fetch mồi lại list, hệ thống sẽ tự cập nhật khi Data log đổ về
+          fetchConnections();
+        })
+        .catch((err: any) => console.error(`[SYNC_ERROR] Failed to initiate sync on target:`, err));
+    }
   };
 
   const handleRemoveConnection = useCallback((ip: string, port: string, mode: 'receive' | 'send') => {

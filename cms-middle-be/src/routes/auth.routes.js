@@ -12,7 +12,6 @@ const JWT_SECRET = process.env.JWT_SECRETKEY || '12345';
  */
 router.post('/api/v1/login', async (req, res) => {
   const { email, password } = req.body;
-  const JWT_SECRET = process.env.JWT_SECRETKEY || 'default_secret';
 
   // 1. Kiểm tra với tài khoản Admin nội bộ (.env)
   const adminEmail = process.env.ADMIN_EMAIL || 'admin@cms.com';

@@ -25,7 +25,7 @@ export const authApi = {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
-    window.location.href = '/login';
+    window.location.hash = '#/login';
   },
 
   getToken: () => localStorage.getItem('accessToken'),
