@@ -59,12 +59,12 @@ function LogFilter({
   const activeCount = selectedServers.size + selectedDevices.size;
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className="">
       <button
         onClick={() => setOpen(v => !v)}
         className={`flex items-center gap-1.5 px-2 py-1 rounded-md transition-all duration-200 group border ${activeCount > 0
-            ? 'border-primary/40 bg-primary/10 text-primary'
-            : 'border-transparent hover:border-outline-variant/30 text-on-surface-variant hover:text-primary'
+          ? 'border-primary/40 bg-primary/10 text-primary'
+          : 'border-transparent hover:border-outline-variant/30 text-on-surface-variant hover:text-primary'
           }`}
       >
         <SlidersHorizontal className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
@@ -76,7 +76,7 @@ function LogFilter({
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 z-50 bg-surface-container-high border border-outline-variant/20 shadow-2xl rounded-lg w-64 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        <div className="absolute right-0 top-full mt-2 z-50 bg-surface-container-high border border-outline-variant/90 shadow-2xl rounded-lg w-64 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
 
           {/* Servers */}
           <div className="px-3 pt-3 pb-1">
@@ -217,14 +217,14 @@ function Dashboard() {
         <div className="col-span-3 grid grid-rows-[1fr_0fr] overflow-hidden bg-background h-full border-r border-outline-variant/20">
 
           <div className="flex flex-col overflow-hidden h-full">
-            <div className="p-4 flex items-center gap-2 border-b border-outline-variant/10 shrink-0">
+            <div className="px-6 py-4 flex items-center gap-2 border-b border-outline-variant/10 shrink-0">
               <Camera className="w-4 h-4 text-primary" />
               <h2 className="text-[10px] font-bold tracking-[0.2em] uppercase text-on-surface">Surveillance Grid</h2>
             </div>
 
             <div className="flex-1 p-6 overflow-y-auto custom-scrollbar bg-surface-container-low/20">
               {latestCameras.length > 0 ? (
-                <div className="grid grid-cols-3 gap-6 auto-rows-max">
+                <div className="grid grid-cols-3 gap-3 auto-rows-max">
                   {latestCameras.map((cam, idx) => (
                     <CameraFeed key={idx} cam={cam} onClick={() => setSelectedLog(cam)} />
                   ))}

@@ -112,14 +112,14 @@ export function StatusBar({
   }
 
   return (
-    <div className="relative border-t border-outline-variant/10 bg-surface-container-low flex flex-col h-full">
+    <div className="relative border-t border-outline-variant/10 bg-surface-container-low flex flex-col h-64">
       {activeTab !== 0 && (
         <button onClick={() => setIsNetworkFormOpen(true)} className={` hover:scale-110 transition-scale duration-300 z-1 cursor-pointer right-3 bottom-3 absolute rounded-lg p-2 bg-primary text-white hover:shadow-md hover:scale-105 transition-all duration-300`}>
           <Plus className="w-4 h-4" />
         </button>
       )}
 
-      <button onClick={() =>
+      {/* <button onClick={() =>
         apiClient.get('/show-connections').then((res) => {
           console.log('res', res.data.connections);
         })
@@ -132,7 +132,7 @@ export function StatusBar({
         // )
       } className={` hover:scale-110 transition-scale duration-300 z-1 cursor-pointer right-[3.25rem] bottom-3 absolute rounded-lg p-2 bg-tertiary text-white hover:shadow-md hover:scale-105 transition-all duration-300`} title="Print logs to console">
         <Terminal className="w-4 h-4" />
-      </button>
+      </button> */}
 
       {isNetworkFormOpen && (
         <AddExternalServer
@@ -164,7 +164,7 @@ export function StatusBar({
           </button>
         ))}
       </div>
-      <div className="flex-1 p-6 overflow-scroll custom-scrollbar relative">
+      <div className="flex-1 px-6 py-4 overflow-scroll custom-scrollbar relative">
         {activeTab === 0 && (
           <div className="grid grid-cols-2 gap-8 max-w-2xl animate-in fade-in duration-500">
             <div className="space-y-1">
@@ -219,7 +219,7 @@ export function StatusBar({
                     return (
                       <div key={idx} className="bg-surface-container border border-outline-variant/10 px-4 py-4 rounded-sm border-l-4 border-l-secondary/50 shadow-sm transition-all hover:bg-surface-container-high/30">
                         {/* Server Header */}
-                        <div className="flex items-center justify-between mb-4 border-b border-outline-variant/5 pb-3">
+                        <div className="flex items-center justify-between border-b border-outline-variant/5">
                           <div className="flex items-center gap-3">
                             <div className="p-2 bg-secondary/10 rounded-lg shrink-0">
                               <Cpu className="w-5 h-5 text-secondary" />
@@ -252,7 +252,7 @@ export function StatusBar({
 
                         {/* Devices list with per-device log counts */}
                         {matchedDevices && matchedDevices.devices.length > 0 ? (
-                          <div className="grid gap-1.5 pl-2">
+                          <div className="grid gap-1.5">
                             {matchedDevices.devices.map((device, dIdx) => {
                               const dStats = deviceStats[device.ip] || deviceStats[device.name];
                               const logCount = dStats?.logCount || 0;
@@ -309,7 +309,7 @@ function UnknownDevicesCard({ orphanDevices }: { orphanDevices: { name: string; 
   return (
     <div className="bg-surface-container border border-outline-variant/10 px-4 py-4 rounded-sm border-l-4 border-l-tertiary/50 shadow-sm mt-4">
       {/* Server Header */}
-      <div className="flex items-center justify-between mb-4 border-b border-outline-variant/5 pb-3">
+      <div className="flex items-center justify-between border-b border-outline-variant/5">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-tertiary/10 rounded-lg shrink-0">
             <Globe className="w-5 h-5 text-tertiary" />
@@ -332,7 +332,7 @@ function UnknownDevicesCard({ orphanDevices }: { orphanDevices: { name: string; 
       </div>
 
       {/* Devices list with per-device log counts */}
-      <div className="grid gap-1.5 pl-2">
+      <div className="grid gap-1.5">
         {orphanDevices.map((device, dIdx) => (
           <DeviceItemRow
             key={dIdx}
