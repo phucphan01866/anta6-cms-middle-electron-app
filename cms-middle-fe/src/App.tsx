@@ -3,7 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { StatusBar } from './components/StatusBar/StatusBar';
 import { LogPopup } from './components/LogPopup';
 import { useSocketManager } from './hooks/useSocketManager';
-import { SlidersHorizontal, Terminal, Check, Cpu, MonitorSmartphone, Camera, CameraOff, Plus, Minus, X, Settings } from 'lucide-react';
+import { SlidersHorizontal, Terminal, Check, Cpu, MonitorSmartphone, Camera, CameraOff, Plus, Minus, X, Settings, Monitor, Network } from 'lucide-react';
 import { LogEntry } from './components/LogEntry';
 import { CameraFeed } from './components/CameraFeed';
 import type { LogData, ServerData, DeviceData } from './types';
@@ -206,9 +206,56 @@ function AppGridCamera({ cameras, devices, onSelectLog }: { cameras: LogData[], 
             ? cameras.find(cam => cam.server?.server_id === gridItem.device.server_id && cam.device_ip === gridItem.device.device_ip)
             : undefined;
           return (
-            <div key={idx} className="relative camera-feed-item h-full w-full bg-surface-container-low/50 border border-outline-variant/10 rounded-xs overflow-hidden">
+            <div
+              key={idx}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.currentTarget.classList.add('ring-2', 'ring-primary', 'ring-inset');
+              }}
+              onDragLeave={(e) => {
+                e.currentTarget.classList.remove('ring-2', 'ring-primary', 'ring-inset');
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.currentTarget.classList.remove('ring-2', 'ring-primary', 'ring-inset');
+                const data = e.dataTransfer.getData('application/json');
+                if (data) {
+                  try {
+                    const parsed = JSON.parse(data);
+                    setGrids(prev => {
+                      const clone = [...prev];
+                      clone[idx] = { gridID: idx, device: parsed };
+                      return clone;
+                    });
+                  } catch (err) { }
+                }
+              }}
+              className="relative group camera-feed-item h-full w-full bg-surface-container-low/50 border border-outline-variant/10 rounded-xs overflow-hidden transition-all"
+            >
               {camera ? (
-                <CameraFeed key={idx} cam={camera} onClick={() => onSelectLog(camera)} />
+                <>
+                  <CameraFeed key={idx} cam={camera} onClick={() => onSelectLog(camera)} />
+                  {/* <div className="no-camera w-full h-full flex flex-col items-center justify-center opacity-30 gap-[10%] text-center px-4 py-2">
+                    <CameraOff className={`${gridCols > colsBreakPoints[1] ? 'w-[80%] h-[80%]' : gridCols > colsBreakPoints[0] ? 'w-8 h-8' : 'w-12 h-12'} transition-all`} />
+                    <span className={`text-[11px] uppercase tracking-widest font-bold line-clamp-1 transition-all ${gridCols > colsBreakPoints[1] ? 'hidden' : ''}`}>
+                      No incoming video streams detected
+                    </span>
+                  </div> */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setGrids(prev => {
+                        return prev.filter((_, i) => i !== idx);
+                      });
+                    }}
+                    className={`opacity-0 group-hover:opacity-100 absolute top-0 right-0 z-10 w-10 h-10 bg-gradient-to-bl from-surface-container-high/90 from-[50%] to-transparent to-[50%] hover:from-primary/90 transition-all duration-300 ease-in-out cursor-pointer text-on-surface hover:text-white group flex items-start justify-end p-[6px]`}
+                    title={gridItem ? 'Change Device' : 'Select Device'}
+                  >
+                    <div className="w-3 h-3 group-hover:scale-110 transition-transform opacity-70 group-hover:opacity-100 flex items-center justify-center">
+                      <X className="w-full h-full" />
+                    </div>
+                  </button>
+                </>
               ) : (
                 <div className="no-camera w-full h-full flex flex-col items-center justify-center opacity-30 gap-[10%] text-center px-4 py-2">
                   <CameraOff className={`${gridCols > colsBreakPoints[1] ? 'w-[80%] h-[80%]' : gridCols > colsBreakPoints[0] ? 'w-8 h-8' : 'w-12 h-12'} transition-all`} />
@@ -217,19 +264,6 @@ function AppGridCamera({ cameras, devices, onSelectLog }: { cameras: LogData[], 
                   </span>
                 </div>
               )}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setOpenDropdownIdx(openDropdownIdx === idx ? null : idx);
-                }}
-                className={`absolute top-0 right-0 z-10 w-10 h-10 bg-gradient-to-bl from-surface-container-high/90 from-[50%] to-transparent to-[50%] hover:from-primary/90 transition-all cursor-pointer text-on-surface hover:text-white group flex items-start justify-end p-[6px] backdrop-blur-sm`}
-                title={gridItem ? 'Change Device' : 'Select Device'}
-              >
-                <div className="w-3 h-3 group-hover:scale-110 transition-transform opacity-70 group-hover:opacity-100 flex items-center justify-center">
-                  <SlidersHorizontal className="w-full h-full" />
-                </div>
-              </button>
-
               {openDropdownIdx === idx && (
                 <div className="absolute top-8 right-1 z-20 w-56 bg-surface-container-high border border-outline-variant/50 shadow-2xl rounded-md overflow-hidden flex flex-col max-h-56 overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-150">
                   <div className="px-3 py-2 border-b border-outline-variant/10 bg-surface-container-highest shrink-0">
@@ -341,6 +375,7 @@ function Dashboard() {
   const [selectedLog, setSelectedLog] = useState<LogData | null>(null);
   const [selectedServers, setSelectedServers] = useState<Set<string>>(new Set());
   const [selectedDevices, setSelectedDevices] = useState<Set<string>>(new Set());
+  const [rightTab, setRightTab] = useState<'logs' | 'devices'>('logs');
 
   const toggleServer = (id: string) =>
     setSelectedServers(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
@@ -388,15 +423,21 @@ function Dashboard() {
     <div className="app-dashboard-root flex flex-col h-screen overflow-hidden bg-background text-on-surface font-sans selection:bg-primary/30 antialiased">
       <main className="app-dashboard-main flex-1 grid grid-cols-4 gap-0 overflow-hidden">
         {/* Main Section */}
-        <div className="app-dashboard-left-section col-span-3 grid grid-rows-[80%_1fr] overflow-hidden bg-background h-full border-r border-outline-variant/20">
+        <div className="app-dashboard-left-section col-span-3 grid grid-rows-[1fr] overflow-hidden bg-background h-full border-r border-outline-variant/20">
           <div className="flex flex-col overflow-hidden h-full">
-            <div className="px-6 py-4 flex items-center gap-2 border-b border-outline-variant/10 shrink-0">
-              <Camera className="w-4 h-4 text-primary" />
-              <h2 className="text-[10px] font-bold tracking-[0.2em] uppercase text-on-surface">Surveillance Grid</h2>
+            <div className="px-6 py-4 flex items-center gap-4 border-b border-outline-variant/10 shrink-0">
+              <button className='flex items-center gap-2'>
+                <Monitor className="w-5 h-5 text-primary" />
+                <h2 className="text-[10px] font-bold tracking-[0.2em] uppercase text-on-surface">Alert Wall</h2>
+              </button>
+              <button className='flex items-center gap-2'>
+                <Network className="w-5 h-5 text-primary" />
+                <h2 className="text-[10px] font-bold tracking-[0.2em] uppercase text-on-surface">Connections Monitor</h2>
+              </button>
             </div>
             <AppGridCamera cameras={latestCameras} devices={devices} onSelectLog={setSelectedLog} />
           </div>
-          <div className="app-status-bar-wrapper shrink-0">
+          {/* <div className="app-status-bar-wrapper shrink-0">
             <StatusBar
               socket={socket}
               isConnected={isConnected}
@@ -410,44 +451,92 @@ function Dashboard() {
               onSave={(ip, port, mode) => handleAddExternalServer(ip, port, mode)}
               onRemoveConnection={(ip: string, port: string, mode: 'receive' | 'send') => handleRemoveConnection(ip, port, mode)}
             />
-          </div>
+          </div> */}
         </div>
 
-        {/* Right Section - Realtime Intelligence Log */}
-        <aside className="app-dashboard-right-section col-span-1 bg-surface-container-lowest flex flex-col overflow-hidden shadow-2xl relative z-10">
-          <div className="p-4 flex items-center justify-between border-b border-outline-variant/10 shrink-0">
-            <div className="flex items-center gap-2">
-              <Terminal className="text-primary w-4 h-4" />
-              <h2 className="font-headline text-xs tracking-[0.15em] uppercase text-on-surface mt-0.5">System Intelligence Log</h2>
-            </div>
-            <div className="flex items-center p-1 cursor-pointer transition-all duration-200 group">
-              <LogFilter
-                servers={servers}
-                devices={devices}
-                selectedServers={selectedServers}
-                selectedDevices={selectedDevices}
-                onToggleServer={toggleServer}
-                onToggleDevice={toggleDevice}
-              />
-            </div>
+        {/* Right Section */}
+        <aside className="app-dashboard-right-section col-span-1 bg-surface-container-lowest flex flex-col overflow-hidden shadow-2xl relative z-10 w-full">
+          <div className="flex items-center border-b border-outline-variant/10 shrink-0">
+            <button
+              onClick={() => setRightTab('logs')}
+              className={`flex-1 py-3 text-[10px] tracking-widest font-bold uppercase transition-colors flex items-center justify-center gap-2 ${rightTab === 'logs' ? 'text-primary border-b-2 border-primary bg-primary/5' : 'text-on-surface-variant hover:bg-surface-container-low/50 border-b-2 border-transparent'}`}
+            >
+              <Terminal className="w-3.5 h-3.5" />Logs
+            </button>
+            <button
+              onClick={() => setRightTab('devices')}
+              className={`flex-1 py-3 text-[10px] tracking-widest font-bold uppercase transition-colors flex items-center justify-center gap-2 ${rightTab === 'devices' ? 'text-primary border-b-2 border-primary bg-primary/5' : 'text-on-surface-variant hover:bg-surface-container-low/50 border-b-2 border-transparent'}`}
+            >
+              <MonitorSmartphone className="w-3.5 h-3.5" />Devices
+            </button>
           </div>
 
-          <div className="app-logs-container flex-1 overflow-y-auto custom-scrollbar p-0 bg-surface-container-low/10">
-            {filteredLogs.length > 0 ? (
-              <div className="flex flex-col">
-                {filteredLogs.map((log, idx) => (
-                  <div key={idx} className="border-b border-outline-variant/5">
-                    <LogEntry log={log} onClick={() => setSelectedLog(log)} />
+          {rightTab === 'logs' ? (
+            <>
+              <div className="p-3 flex items-center justify-between border-b border-outline-variant/10 shrink-0 bg-surface-container-lowest">
+                <span className="text-[10px] font-bold tracking-widest text-on-surface-variant uppercase">Filter Logs</span>
+                <div className="flex items-center p-1 cursor-pointer transition-all duration-200 group">
+                  <LogFilter
+                    servers={servers}
+                    devices={devices}
+                    selectedServers={selectedServers}
+                    selectedDevices={selectedDevices}
+                    onToggleServer={toggleServer}
+                    onToggleDevice={toggleDevice}
+                  />
+                </div>
+              </div>
+
+              <div className="app-logs-container flex-1 overflow-y-auto custom-scrollbar p-0 bg-surface-container-low/10">
+                {filteredLogs.length > 0 ? (
+                  <div className="flex flex-col">
+                    {filteredLogs.map((log, idx) => (
+                      <div key={idx} className="border-b border-outline-variant/5">
+                        <LogEntry log={log} onClick={() => setSelectedLog(log)} />
+                      </div>
+                    ))}
                   </div>
-                ))}
+                ) : (
+                  <div className="p-10 flex flex-col items-center justify-center opacity-20 gap-2 h-full text-center">
+                    <Terminal className="w-8 h-8" />
+                    <span className="text-[10px] uppercase font-bold tracking-widest">Logs queue empty</span>
+                  </div>
+                )}
               </div>
-            ) : (
-              <div className="p-10 flex flex-col items-center justify-center opacity-20 gap-2 h-full text-center">
-                <Terminal className="w-8 h-8" />
-                <span className="text-[10px] uppercase font-bold tracking-widest">Logs queue empty</span>
-              </div>
-            )}
-          </div>
+            </>
+          ) : (
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-3 bg-surface-container-low/10 flex flex-col gap-2 relative">
+              <div className="text-[9px] uppercase tracking-widest text-on-surface-variant mb-2 text-center opacity-50 font-bold sticky top-0 py-1">Drag items to assign to grid cells</div>
+              {Object.values(devices).flatMap(server => server.devices?.map(dev => (
+                <div
+                  key={`${server.server.server_id}-${dev.ip}`}
+                  draggable
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData('application/json', JSON.stringify({
+                      server_serial: server.server.serial,
+                      server_id: server.server.server_id,
+                      device_ip: dev.ip,
+                      device_name: dev.name,
+                      device_type: dev.type || 'vms'
+                    }));
+                  }}
+                  className="p-3 bg-surface-container hover:bg-surface-container-high border border-outline-variant/10 rounded-sm cursor-grab active:cursor-grabbing flex flex-col gap-1 shadow-sm transition-all text-on-surface group"
+                >
+                  <div className="flex justify-between items-center">
+                    <span className="text-[11px] font-bold uppercase tracking-widest group-hover:text-primary transition-colors">{dev.name}</span>
+                    <span className="text-[9px] px-1.5 py-0.5 bg-surface-container-highest rounded text-on-surface-variant uppercase font-medium">{dev.type || 'vms'}</span>
+                  </div>
+                  <span className="text-[10px] text-on-surface-variant font-mono">{dev.ip}</span>
+                </div>
+              )))}
+              {!Object.values(devices).some(s => s.devices?.length > 0) && (
+                <div className="p-10 flex flex-col items-center justify-center opacity-30 gap-2 h-full text-center">
+                  <MonitorSmartphone className="w-8 h-8" />
+                  <span className="text-[10px] uppercase font-bold tracking-widest">No Devices Found</span>
+                </div>
+              )}
+            </div>
+          )}
         </aside>
       </main>
 

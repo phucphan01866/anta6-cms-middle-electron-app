@@ -4,7 +4,7 @@ export function CameraFeed({ cam, onClick }: { cam: LogData, onClick: () => void
   return (
     <div
       onClick={onClick}
-      className="camera-feed-container group relative aspect-video bg-surface-container-lowest overflow-hidden rounded-sm border border-outline-variant/20 shadow-inner cursor-pointer hover:border-primary/50 transition-all duration-300"
+      className="camera-feed-container group relative bg-surface-container-lowest overflow-hidden rounded-sm border border-outline-variant/20 shadow-inner cursor-pointer transition-all duration-300"
     >
       {cam.snapshot ? (
         <img
