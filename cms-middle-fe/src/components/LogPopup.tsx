@@ -5,7 +5,7 @@ import { TriangleAlert, Cloud, X } from 'lucide-react';
 export function LogPopup({ log, onClose }: { log: LogData, onClose: () => void }) {
   const snapshot = log.raw?.body?.snapshot;
   const onClickOutside = (e: React.MouseEvent<HTMLDivElement>) => { if (e.target === e.currentTarget) onClose() }
-  console.log("log ", log)
+  // console.log("log ", log)
   const [isShowImgRaw, setIsShowImgRaw] = useState<Boolean>(false)
   return (
     <div onClick={onClickOutside} className="log-popup-overlay fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">

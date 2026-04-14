@@ -1,0 +1,546 @@
+import { useState, useMemo } from 'react';
+import type { LogData, SystemConnection, SystemConfig, ServerData, DeviceData } from '../types';
+import { Plus, Inbox, Activity, Terminal, Cpu, Globe, Send, Wifi, WifiOff, Loader2, ChevronDown, RefreshCw, Trash2, Settings } from 'lucide-react';
+import { AddExternalServer } from './AddExternalServer';
+import { ConfigSystem } from './ConfigSystem';
+import apiClient from '../api/apiClient';
+import { socket } from '../socket';
+import axios from 'axios';
+
+function InfoTooltip({ children, content, side = "top" }: { children: React.ReactNode, content: string, side?: "top" | "bottom" }) {
+  const isBottom = side === "bottom";
+  return (
+    <div className="relative w-fit group/tooltip flex items-center cursor-help">
+      {children}
+      <div className={`absolute left-1/2 -translate-x-1/2 ${isBottom ? 'top-full mt-1.5' : 'bottom-full mb-1.5'} w-max max-w-[200px] text-center z-50 pointer-events-none opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 bg-on-surface text-gray-700 text-[10px] px-2 py-1.5 rounded shadow-lg font-medium leading-tight`}>
+        {content}
+        <div className={`absolute left-1/2 -translate-x-1/2 ${isBottom ? 'bottom-full border-b-[4px] border-b-on-surface' : 'top-full border-t-[4px] border-t-on-surface'} border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent`}></div>
+      </div>
+    </div>
+  );
+}
+
+export function ConnectionsMonitor({
+  isConnected, logs, sendServers, receiveServers, onSave, systemConfig, onSaveSystemConfig, onRemoveConnection, servers, devices
+}: {
+  socket: any,
+  isConnected: boolean,
+  logs: LogData[],
+  sendServers: SystemConnection[],
+  receiveServers: SystemConnection[],
+  systemConfig: SystemConfig;
+  servers: Record<string, ServerData>;
+  devices: Record<string, DeviceData>;
+  onSave: (ip: string, port: string, mode: 'receive' | 'send') => void,
+  onSaveSystemConfig: (config: SystemConfig) => void,
+  onRemoveConnection: (ip: string, port: string, mode: 'receive' | 'send') => void,
+}) {
+  const [isNetworkFormOpen, setIsNetworkFormOpen] = useState(false);
+  const [isConfigSystemOpen, setIsConfigSystemOpen] = useState(false);
+  const [isInputExpanded, setIsInputExpanded] = useState(false);
+  const [isOutputExpanded, setIsOutputExpanded] = useState(false);
+
+  // Group log stats per device_ip per server
+  const deviceLogStats = useMemo(() => {
+    const stats: Record<string, Record<string, { deviceName: string; deviceIp: string; logCount: number }>> = {};
+    (logs || []).forEach(log => {
+      const serverId = log.server?.server_id || log.server?.serial || 'UNKNOWN_SERVER';
+      if (!stats[serverId]) stats[serverId] = {};
+      const deviceKey = log.device_ip || log.device_name || 'UNKNOWN_DEVICE';
+      if (!stats[serverId][deviceKey]) {
+        stats[serverId][deviceKey] = { deviceName: log.device_name || 'N/A', deviceIp: log.device_ip || 'N/A', logCount: 0 };
+      }
+      stats[serverId][deviceKey].logCount += 1;
+    });
+    return stats;
+  }, [logs]);
+
+  // Find logs that don't match any configured server/device
+  const orphanDevices = useMemo(() => {
+    const knownKeys = new Set<string>();
+    Object.values(servers).forEach(srv => {
+      const serverId = srv.id || srv.serial || srv.server_ip || '';
+      const matchedDevices = devices[serverId] || devices[srv.id] || devices[srv.serial];
+      if (matchedDevices && matchedDevices.devices) {
+        matchedDevices.devices.forEach((d: any) => {
+          if (d.ip) knownKeys.add(`${serverId}::${d.ip}`);
+          if (d.name) knownKeys.add(`${serverId}::${d.name}`);
+        });
+      }
+    });
+
+    const orphans: { name: string, ip: string, logCount: number }[] = [];
+    Object.keys(deviceLogStats).forEach(serverId => {
+      // Check if server is entirely unknown
+      const isServerUnknown = !Object.values(servers).some(s => s.id === serverId || s.serial === serverId || s.server_ip === serverId);
+
+      Object.keys(deviceLogStats[serverId]).forEach(deviceKey => {
+        const key = `${serverId}::${deviceKey}`;
+        // If server is unknown, or server is known but device is unknown
+        if (isServerUnknown || !knownKeys.has(key)) {
+          const stat = deviceLogStats[serverId][deviceKey];
+          orphans.push({
+            name: stat.deviceName,
+            ip: stat.deviceIp,
+            logCount: stat.logCount
+          });
+        }
+      });
+    });
+    return orphans;
+  }, [deviceLogStats, servers, devices]);
+
+  return (
+    <div className="ConnectionsMonitor flex flex-col h-full bg-background relative">
+      {/* Settings / Config Modals */}
+      {isNetworkFormOpen && (
+        <AddExternalServer
+          onSave={onSave}
+          onClose={() => setIsNetworkFormOpen(false)}
+        />
+      )}
+      {isConfigSystemOpen && (
+        <ConfigSystem
+          initialConfig={systemConfig}
+          onSave={onSaveSystemConfig}
+          onClose={() => setIsConfigSystemOpen(false)}
+        />
+      )}
+
+      {/* Main Connections Monitor Area */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
+        <div className="max-w-[1400px] mx-auto flex flex-col gap-6 animate-in fade-in duration-500 h-full">
+
+          {/* Quick System Info Overview */}
+          <div className="flex items-center justify-between border-b border-outline-variant/10 pb-4 shrink-0">
+            <div className="flex items-center gap-6">
+              <div className="flex flex-col gap-1">
+                <span className="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest flex items-center gap-2">
+                  System Binding Host
+                </span>
+                <div className="flex items-center gap-3">
+                  <span className="text-lg font-black text-primary font-mono tracking-tight leading-none">{systemConfig.be.ip}:{systemConfig.be.port}</span>
+                  <button
+                    onClick={() => setIsConfigSystemOpen(true)}
+                    className="p-1 text-on-surface-variant hover:text-primary transition-colors bg-surface-container hover:bg-primary/10 rounded-sm"
+                    title="Cấu hình hệ thống"
+                  >
+                    <Settings className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+              <div className="w-px h-8 bg-outline-variant/10"></div>
+              <div className="flex flex-col gap-1">
+                <span className="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest flex items-center gap-2">
+                  System Connection Status
+                </span>
+                <div className="flex items-center gap-2">
+                  <div
+                    onClick={() => { if (!isConnected) { socket.connect() } }}
+                    className={`w-2 h-2 rounded-full ${isConnected ? 'bg-secondary ring-4 ring-secondary/20' : 'bg-tertiary ring-4 ring-tertiary/20 cursor-pointer'} ${!isConnected ? 'animate-pulse' : ''}`}></div>
+                  <div className={`text-[13px] font-black font-mono tracking-tight ${isConnected ? 'text-secondary' : 'text-tertiary'}`}>
+                    {isConnected ? 'STABLE' : 'UNCONNECTED'}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setIsNetworkFormOpen(true)}
+              className="flex items-center gap-2 bg-primary text-on-primary px-3 py-2 hover:bg-primary/90 transition-all font-bold tracking-widest text-[10px] uppercase shadow-md shadow-primary/20 rounded-sm"
+            >
+              <Plus className="w-4 h-4" />
+              Add Connection
+            </button>
+          </div>
+
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col  bg-surface-container/20 border border-outline-variant/50 rounded-2xl shadow-sm">
+              <div
+                className="flex items-center justify-between gap-3 shrink-0 p-4 pb-4 cursor-pointer hover:bg-surface-container-high/30 transition-colors select-none"
+                onClick={() => setIsInputExpanded(!isInputExpanded)}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-md bg-secondary/10 shrink-0">
+                    <Terminal className="w-4 h-4 text-secondary" />
+                  </div>
+                  <div className="flex flex-col">
+                    <h4 className="text-[12px] font-black tracking-[0.1em] uppercase text-on-surface">Input Connections</h4>
+                    <span className="text-[10px] text-on-surface-variant font-medium">Servers emitting logs to this system</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-4 pr-3 border-r border-outline-variant/20">
+                    <div className="flex flex-col items-end gap-0.5">
+                      <span className="text-[8px] font-bold text-on-surface-variant/70 uppercase tracking-widest">SERVERS</span>
+                      <span className="text-[14px] font-black font-mono text-on-surface leading-none">{Object.keys(servers).length}</span>
+                    </div>
+                    <div className="flex flex-col items-end gap-0.5">
+                      <span className="text-[8px] font-bold text-on-surface-variant/70 uppercase tracking-widest">DEVICES</span>
+                      <span onClick={() => console.log(devices, orphanDevices)} className="text-[14px] font-black font-mono text-on-surface leading-none">
+                        {Object.values(devices).reduce((acc, curr) => acc + (curr.devices?.length || 0), 0) + (orphanDevices?.length || 0)}
+                      </span>
+                    </div>
+                  </div>
+                  <ChevronDown className={`w-5 h-5 text-on-surface-variant transition-transform duration-300 ${isInputExpanded ? 'rotate-180' : ''}`} />
+                </div>
+              </div>
+
+              <div className={`grid transition-all duration-300 ease-in-out ${isInputExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+                <div className={`min-h-0 ${isInputExpanded ? 'overflow-visible' : 'overflow-hidden'}`}>
+                  <div className="flex-1 custom-scrollbar grid gap-4 content-start px-4 pb-5">
+                    {Object.keys(servers).length === 0 && orphanDevices.length === 0 ? (
+                      <div className="py-12 flex flex-col items-center justify-center opacity-40 gap-3 border border-dashed border-outline-variant/20 rounded-md bg-surface-container-lowest/50">
+                        <Inbox className="w-8 h-8 text-on-surface-variant" />
+                        <span className="text-[10px] uppercase tracking-widest font-bold">No input connections</span>
+                      </div>
+                    ) : (
+                      <>
+                        {Object.values(servers).map((srv, idx) => {
+                          const serverId = srv.id || srv.serial || srv.server_ip || '';
+                          const matchedDevices = devices[serverId] || devices[srv.id] || devices[srv.serial];
+                          const deviceStats = deviceLogStats[serverId] || deviceLogStats[srv.id] || deviceLogStats[srv.serial] || {};
+
+                          return (
+                            <ServerInputCard
+                              key={idx}
+                              srv={srv}
+                              matchedDevices={matchedDevices}
+                              deviceStats={deviceStats}
+                            />
+                          );
+                        })}
+                        <UnknownDevicesCard orphanDevices={orphanDevices} />
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-col  bg-surface-container/20 border border-outline-variant/50 rounded-2xl shadow-sm">
+              <div
+                className="flex items-center justify-between gap-3 shrink-0 p-4 pb-4 cursor-pointer hover:bg-surface-container-high/30 transition-colors select-none"
+                onClick={() => setIsOutputExpanded(!isOutputExpanded)}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-md bg-primary/10 shrink-0">
+                    <Globe className="w-4 h-4 text-primary" />
+                  </div>
+                  <div className="flex flex-col">
+                    <h4 className="text-[12px] font-black tracking-[0.1em] uppercase text-on-surface">Output Targets</h4>
+                    <span className="text-[10px] text-on-surface-variant font-medium">Remote endpoints receiving from this system</span>
+                  </div>
+                </div>
+                <ChevronDown className={`w-5 h-5 text-on-surface-variant transition-transform duration-300 ${isOutputExpanded ? 'rotate-180' : ''}`} />
+              </div>
+
+              <div className={`grid transition-all duration-300 ease-in-out ${isOutputExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+                <div className={`min-h-0 ${isOutputExpanded ? 'overflow-visible' : 'overflow-hidden'}`}>
+                  <div className="flex-1 overflow-y-auto custom-scrollbar grid gap-4 content-start px-4 pb-5">
+                    {sendServers.length === 0 ? (
+                      <div className="py-12 flex flex-col items-center justify-center opacity-40 gap-3 border border-dashed border-outline-variant/20 rounded-md bg-surface-container-lowest/50">
+                        <Send className="w-8 h-8 text-on-surface-variant" />
+                        <span className="text-[10px] uppercase tracking-widest font-bold">No output targets configured</span>
+                      </div>
+                    ) : (
+                      <>
+                        {sendServers.map((s, idx) => (
+                          <SendTargetCard key={idx} conn={s} />
+                        ))}
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function UnknownDevicesCard({ orphanDevices }: { orphanDevices: { name: string; ip: string; logCount: number }[] }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  if (!orphanDevices || orphanDevices.length === 0) return null;
+
+  return (
+    <div className="unknown-devices-card bg-surface-container border border-outline-variant/10 px-4 py-3 rounded-md border-l-[3px] border-l-tertiary/50 shadow-sm transition-all  group">
+      {/* Server Header */}
+      <div
+        className="flex items-center justify-between border-b border-outline-variant/5 cursor-pointer select-none"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-tertiary/10 rounded-lg shrink-0">
+            <Globe className="w-4 h-4 text-tertiary" />
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <InfoTooltip content="Các logs không có cấu hình Server/Device tương ứng">
+              <span className="text-[14px] font-black text-on-surface tracking-wide leading-none group-hover:text-primary transition-colors">Unmapped / External Devices</span>
+            </InfoTooltip>
+            <div className="flex items-center gap-3 pt-1">
+              <InfoTooltip content="Trạng thái">
+                <span className="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest">UNREGISTERED ORPHAN LOGS</span>
+              </InfoTooltip>
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="flex flex-col items-end gap-1 px-3 py-1 bg-surface-container/50 rounded border border-outline-variant/10">
+            <span className="text-[8px] font-bold text-on-surface-variant uppercase tracking-widest">UNKNOWN DEVICES</span>
+            <span className="text-[14px] font-black font-mono text-tertiary leading-none">{orphanDevices.length}</span>
+          </div>
+          <ChevronDown className={`w-4 h-4 text-on-surface-variant transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
+        </div>
+      </div>
+
+      <div className={`grid transition-all duration-300 ease-in-out ${isExpanded ? 'grid-rows-[1fr] opacity-100 mt-4' : 'grid-rows-[0fr] opacity-0 mt-0'}`}>
+        <div className={`min-h-0 ${isExpanded ? 'overflow-visible' : 'overflow-hidden'}`}>
+          <div className="grid gap-2 pl-1 border-l-2 border-outline-variant/10 ml-2">
+            {orphanDevices.map((device, dIdx) => (
+              <DeviceItemRow
+                key={dIdx}
+                name={device.name}
+                ip={device.ip}
+                logCount={device.logCount}
+                isOrphan={true}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DeviceItemRow({
+  name,
+  ip,
+  type,
+  logCount,
+  isOrphan = false
+}: {
+  name: string;
+  ip: string;
+  type?: string;
+  logCount: number;
+  isOrphan?: boolean;
+}) {
+  return (
+    <div className="device-item-row flex items-center gap-4 px-3 py-2 bg-surface-container-lowest/40 rounded border border-outline-variant/5 hover:border-outline-variant/20 transition-colors">
+      <InfoTooltip content="Phân loại thiết bị" side="bottom">
+        <span className={`text-[9.5px] font-mono font-medium min-w-[70px] text-center px-1.5 py-0.5 rounded shadow-sm ${isOrphan ? "text-tertiary bg-tertiary/10 border border-tertiary/20" : "text-secondary bg-secondary/10 border border-secondary/20"}`}>
+          {isOrphan ? "UNKNOWN" : (type ? type.toUpperCase() : "UNKNOWN")}
+        </span>
+      </InfoTooltip>
+      <InfoTooltip content="Tên Thiết bị" side="bottom">
+        <span className="text-[11px] font-bold text-on-surface-variant tracking-wide flex-1 truncate max-w-[200px] block">{name}</span>
+      </InfoTooltip>
+      <div className="flex w-full items-center justify-between gap-4">
+        <InfoTooltip content="IP Thiết bị" side="bottom">
+          <span className="text-[10px] font-mono font-medium text-on-surface-variant/70 min-w-[100px] bg-surface-container-low px-1.5 py-0.5 rounded border border-outline-variant/5">{ip}</span>
+        </InfoTooltip>
+        <InfoTooltip content="Tổng Logs nhận được">
+          <span className={`text-[10px] font-black font-mono px-2 py-1 rounded min-w-[70px] text-center transition-all ${logCount > 0 ? 'text-secondary bg-secondary/15 ring-1 ring-secondary/20' : 'text-on-surface-variant/40 bg-surface-container border border-outline-variant/10'}`}>
+            {logCount} logs
+          </span>
+        </InfoTooltip>
+      </div>
+    </div>
+  );
+}
+
+function SendTargetCard({ conn }: { conn: SystemConnection }) {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const status = conn.status || 'connecting';
+
+  const handleRemoveConnection = () => {
+    console.log('[DEBUG] remove-connection for:', conn.ip);
+    setIsMenuOpen(false);
+    // TODO: Implement actual removal logic
+  };
+
+  const handleReconnect = async () => {
+    console.log('[DEBUG] reconnect for:', conn.ip);
+    // Gọi API -> BE sẽ bắn socket event -> useSocketManager cập nhật sendServers -> conn.status tự thay đổi
+    await apiClient.post('/api/v1/reconnect-connection', {
+      ip: conn.ip,
+      port: conn.port,
+    });
+  };
+
+  const statusConfig = {
+    connecting: {
+      dot: 'bg-amber-400 ring-amber-400/20',
+      badge: 'text-amber-400 bg-amber-400/10 border-amber-400/30',
+      label: 'CONNECTING',
+      icon: <Loader2 className="w-3 h-3 animate-spin" />,
+      border: 'border-l-amber-400/60',
+    },
+    connected: {
+      dot: 'bg-primary ring-primary/20',
+      badge: 'text-primary bg-primary/10 border-primary/30 hover:bg-primary/20 cursor-pointer',
+      label: 'CONNECTED',
+      icon: <Wifi className="w-3 h-3" />,
+      border: 'border-l-primary/60',
+    },
+    disconnected: {
+      dot: 'bg-tertiary ring-tertiary/20',
+      badge: 'text-tertiary bg-tertiary/10 border-tertiary/30 hover:bg-tertiary/20 cursor-pointer',
+      label: 'DISCONNECTED',
+      icon: <WifiOff className="w-3 h-3" />,
+      border: 'border-l-tertiary/60',
+    },
+  } as const;
+
+  const cfg = statusConfig[status] ?? statusConfig.disconnected;
+
+  return (
+    <div className={`send-target-card bg-surface-container border border-outline-variant/10 px-5 py-4 rounded-md flex items-center justify-between border-l-[3px] ${cfg.border} transition-all hover:bg-surface-container-high/40 shadow-sm group`}>
+      <div className="flex items-start gap-4">
+        <div className={`mt-2 flex-shrink-0 w-2 h-2 rounded-full ring-[3px] ${cfg.dot} ${status === 'connecting' ? 'animate-pulse' : ''}`}></div>
+        <div className="flex flex-col gap-1">
+          <span className="text-[10px] font-bold text-on-surface-variant/70 uppercase tracking-widest flex items-center gap-1.5">
+            Target Endpoint
+          </span>
+          <div className="flex items-end gap-1">
+            <span className="text-[16px] font-black text-on-surface font-mono tracking-tight leading-none">{conn.ip}</span>
+            <span className="text-[12px] font-mono font-medium text-on-surface-variant/60 mb-0.5">:{conn.port}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-5">
+        <div className="flex flex-col items-end gap-1.5">
+          <span className="text-[9px] font-bold text-on-surface-variant/70 uppercase tracking-widest">Logs Sent</span>
+          <span className="text-[12px] font-black font-mono text-on-surface flex items-center justify-end gap-1.5 min-w-[50px] bg-surface-container-low px-2 py-0.5 rounded border border-outline-variant/10">
+            <Send className="w-3 h-3 text-on-surface-variant/50" />
+            <span>{conn.sentCount || 0}</span>
+          </span>
+        </div>
+
+        <div className="flex flex-col items-end gap-1.5 border-l border-outline-variant/10 pl-5 relative h-full justify-center">
+          <span className="text-[9px] font-bold text-on-surface-variant/70 uppercase tracking-widest">Status</span>
+
+          {status === 'connected' ? (
+            <div className="relative">
+              <button
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                className={`text-[10px] uppercase font-bold px-2 py-1 rounded font-mono border flex items-center gap-1.5 transition-colors shadow-sm ${cfg.badge}`}
+              >
+                {cfg.icon}
+                {cfg.label}
+                <ChevronDown className={`w-3 h-3 transition-transform opacity-60 ${isMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {isMenuOpen && (
+                <div className="absolute right-0 top-full mt-2 z-50 bg-surface-container-high border border-outline-variant shadow-lg rounded min-w-[160px]  animate-in fade-in zoom-in duration-150">
+                  <button
+                    onClick={handleRemoveConnection}
+                    className="w-full text-left px-3 py-2.5 text-[10px] font-bold text-tertiary hover:bg-tertiary/10 flex items-center gap-2 transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    REMOVE CONNECTION
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : status === 'disconnected' ? (
+            <InfoTooltip content="Kết nối lại" side="top">
+              <button
+                onClick={handleReconnect}
+                className={`text-[10px] uppercase font-bold px-2 py-1 rounded font-mono border flex items-center gap-1.5 transition-colors shadow-sm ${cfg.badge}`}
+              >
+                <RefreshCw className="w-3 h-3" />
+                {cfg.label}
+              </button>
+            </InfoTooltip>
+          ) : (
+            <span className={`text-[10px] uppercase font-bold px-2 py-1 rounded font-mono border flex items-center gap-1.5 shadow-sm ${cfg.badge}`}>
+              {cfg.icon}
+              {cfg.label}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {isMenuOpen && (
+        <div
+          className="fixed inset-0 z-40"
+          onClick={() => setIsMenuOpen(false)}
+        ></div>
+      )}
+    </div>
+  );
+}
+
+function ServerInputCard({ srv, matchedDevices, deviceStats }: { srv: any, matchedDevices: any, deviceStats: any }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  return (
+    <div className="server-item-card bg-surface-container border border-outline-variant/10 px-4 py-3 rounded-md border-l-[3px] border-l-secondary/60 shadow-sm transition-all hover:bg-surface-container-high/40 group ">
+      {/* Server Header */}
+      <div
+        className="flex items-center justify-between border-b border-outline-variant/5 cursor-pointer select-none"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <div className="flex items-start gap-3">
+          <div className="p-2 bg-secondary/10 rounded-lg shrink-0">
+            <Cpu className="w-4 h-4 text-secondary" />
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <InfoTooltip content="Tên Server">
+              <span className="text-[14px] font-black text-on-surface tracking-wide leading-none group-hover:text-primary transition-colors">{srv.server_name || srv.id}</span>
+            </InfoTooltip>
+            <div className="flex items-center gap-3 pt-1">
+              <InfoTooltip content="Mã định danh Server (Server ID)">
+                <span className="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest">{srv.id || srv.serial}</span>
+              </InfoTooltip>
+              <span className="w-1 h-1 rounded-full bg-outline-variant/30"></span>
+              <InfoTooltip content="Địa chỉ IP gốc của Server">
+                <span className="text-[10px] font-mono font-medium text-on-surface-variant">IP: {srv.server_ip || srv.sender_ip}</span>
+              </InfoTooltip>
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="flex flex-col items-end gap-1 px-3 py-1 bg-surface-container/50 rounded border border-outline-variant/10">
+            <span className="text-[8px] font-bold text-on-surface-variant uppercase tracking-widest">DEVICES ASSIGNED</span>
+            <span className="text-[14px] font-black font-mono text-on-surface leading-none">{matchedDevices?.devices?.length || 0}</span>
+          </div>
+          <ChevronDown className={`w-4 h-4 text-on-surface-variant transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
+        </div>
+      </div>
+
+      {/* Devices list with per-device log counts */}
+      <div className={`grid transition-all duration-300 ease-in-out ${isExpanded ? 'grid-rows-[1fr] opacity-100 mt-4' : 'grid-rows-[0fr] opacity-0 mt-0'}`}>
+        <div className={`min-h-0 ${isExpanded ? 'overflow-visible' : 'overflow-hidden'}`}>
+          {matchedDevices && matchedDevices.devices.length > 0 ? (
+            <div className="grid gap-2 border-l-2 border-outline-variant/10 pl-2 ml-1">
+              {matchedDevices.devices.map((device: any, dIdx: number) => {
+                const dStats = deviceStats[device.ip] || deviceStats[device.name];
+                const logCount = dStats?.logCount || 0;
+                return (
+                  <DeviceItemRow
+                    key={dIdx}
+                    name={device.name}
+                    ip={device.ip}
+                    type={device.type}
+                    logCount={logCount}
+                  />
+                );
+              })}
+            </div>
+          ) : (
+            <div className="px-3 py-3 text-[10px] font-bold text-on-surface-variant/50 uppercase tracking-widest flex items-center justify-center gap-2 bg-surface-container-lowest/30 rounded-sm border border-dashed border-outline-variant/10">
+              <Activity className="w-3 h-3 opacity-50" />
+              No devices mapped from this server
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

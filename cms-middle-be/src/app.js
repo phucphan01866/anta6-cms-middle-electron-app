@@ -72,6 +72,9 @@ app.use((req, res, next) => {
     // console.log(
     //   `[${timestamp}] ${req.method} ${req.originalUrl} -> ${res.statusCode} (${durationMs}ms)${lengthPart}${reqPart}${resPart}`
     // ); 
+    console.log(
+      `[${timestamp}] ${req.method} ${req.originalUrl}`
+    );
     // if (req.headers['authorization']) {
     //   console.log(`[${timestamp}] Auth Header: ${req.headers['authorization']}`);
     // }

@@ -7,7 +7,7 @@ export function LogEntry({ log, onClick }: { log: LogData, onClick: () => void }
   let bgBorderClass = 'bg-primary';
 
   let logType = typeof log.log_type === 'string' ? log.log_type.toLowerCase() : 'info';
-  
+
   if (logType.includes('event') || logType.includes('error')) {
     Icon = AlertCircle;
     colorClass = 'text-tertiary';
@@ -22,19 +22,31 @@ export function LogEntry({ log, onClick }: { log: LogData, onClick: () => void }
 
   return (
     <div
-      onClick={onClick}
-      className="log-entry-item relative px-3 py-2 bg-surface-container-high/40 rounded-r-sm group hover:bg-surface-container-high transition-colors border-l-0 cursor-pointer"
+      onClick={() => onClick()}
+      className="log-entry-item
+      flex items-center justify-between gap-3
+      relative bg-surface-container-high/40 rounded-r-sm group hover:bg-surface-container-high transition-colors border-l-0 cursor-pointer py-1"
     >
-      <div className={`log-entry-indicator absolute left-0 top-0 bottom-0 w-1 ${bgBorderClass}`}></div>
-      <div className="flex justify-between items-start mb-1 gap-4">
-        <span className={`log-entry-type text-[10px] font-bold ${colorClass} uppercase flex items-center gap-1.5 shrink-0`}>
-          <Icon className="w-3.5 h-3.5" />
-          {typeof log.log_type === 'string' ? log.log_type.toUpperCase() : 'INFO'}
-        </span>
-        <span className="text-[9px] font-mono text-on-surface-variant font-bold">{timeStr}</span>
+      <div className='h-full flex flex-col pl-3 flex-1 min-w-0'>
+        <div className={`log-entry-indicator absolute left-0 top-0 bottom-0 w-1 ${bgBorderClass}`}></div>
+        <div className="flex items-start mb-1 gap-4">
+          <span className={`log-entry-type text-[10px] font-bold ${colorClass} uppercase flex items-center gap-1.5 shrink-0`}>
+            <Icon className="w-3.5 h-3.5" />
+            {typeof log.log_type === 'string' ? log.log_type.toUpperCase() : 'INFO'}
+          </span>
+        </div>
+        <p className="text-[11px] text-on-surface mb-1 font-medium leading-relaxed truncate">{log.description}</p>
+        <div className="text-[9px] font-mono text-on-surface-variant/70 italic truncate">{log.server.server_id} // {log.device_name} // {timeStr}</div>
       </div>
-      <p className="text-[11px] text-on-surface mb-1 font-medium leading-relaxed">{log.description}</p>
-      <div className="text-[9px] font-mono text-on-surface-variant/70 italic max-w-full truncate">{log.ip} // {log.device_name}</div>
+      {log.snapshot && (
+        <div className="rounded-sm overflow-hidden border border-outline-variant/20 shrink-0 w-24 mr-2">
+          <img
+            src={log.snapshot.startsWith('data:image') ? log.snapshot : `data:image/jpeg;base64,${log.snapshot}`}
+            alt="Snapshot"
+            className="w-full h-auto object-contain max-h-20 bg-black/20"
+          />
+        </div>
+      )}
     </div>
   );
 }
