@@ -1,23 +1,23 @@
 import React, { useState } from 'react';
-import type { ServerInfo, LogData } from '../../types';
+import type { ServerData, LogData, DeviceItem } from '../../types';
 import { ChevronDown, ChevronRight, TriangleAlert } from 'lucide-react';
 
-export function ServerDropdown({ server, logs }: { server: ServerInfo, logs: LogData[] }) {
+export function ServerDropdown({ server, devices = [], logs }: { server: ServerData, devices?: DeviceItem[], logs: LogData[] }) {
   const [isOpen, setIsOpen] = useState(false);
-  const totalDevices = server.devices?.length || 0;
+  const totalDevices = devices.length;
 
   return (
-    <div className="bg-surface-container/20 border border-outline-variant/10 rounded-sm overflow-hidden transition-all duration-300">
+    <div className="server-dropdown-container bg-surface-container/20 border border-outline-variant/10 rounded-sm overflow-hidden transition-all duration-300">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between p-3 hover:bg-surface-container/40 transition-colors group text-left"
+        className="server-dropdown-btn w-full flex items-center justify-between p-3 hover:bg-surface-container/40 transition-colors group text-left"
       >
         <div className="flex items-center gap-3">
           <div className={`p-1 rounded-sm ${isOpen ? 'bg-primary/20 text-primary' : 'bg-surface-container-highest/50 text-on-surface-variant'}`}>
             {isOpen ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
           </div>
           <div className="flex flex-col">
-            <span className="text-[10px] font-black text-on-surface uppercase tracking-widest">{server.name} — Core Node</span>
+            <span className="text-[10px] font-black text-on-surface uppercase tracking-widest">{server.server_name || server.id} — Core Node</span>
             <span className="text-[8px] font-mono text-on-surface-variant/70 uppercase">Serial: {server.serial}</span>
           </div>
         </div>
@@ -32,18 +32,18 @@ export function ServerDropdown({ server, logs }: { server: ServerInfo, logs: Log
 
       {isOpen && (
         <div className="px-3 pb-3 space-y-1.5 border-t border-outline-variant/5 animate-in slide-in-from-top-2 duration-300">
-          {server.devices?.map(device => {
-            const nodeLogs = logs.filter(l => l.cameraIp === device.device_ip);
+          {devices.map((device: DeviceItem) => {
+            const nodeLogs = logs.filter(l => l.cameraIp === device.ip);
             const alertCount = nodeLogs.length;
             const latestLog = nodeLogs[0];
             const lastTime = latestLog ? latestLog.time : 'N/A';
             return (
-              <div key={device.device_ip} className="bg-surface-container-low/40 border border-outline-variant/10 px-4 pb-2 rounded-sm flex items-center justify-between hover:bg-surface-container-low transition-colors group/item">
+              <div key={device.ip} className="bg-surface-container-low/40 border border-outline-variant/10 px-4 pb-2 rounded-sm flex items-center justify-between hover:bg-surface-container-low transition-colors group/item">
                 <div className="flex items-center gap-3">
                   <div className="w-1 h-4 rounded-full bg-secondary/40 group-hover/item:bg-secondary transition-colors"></div>
                   <div className="flex flex-col">
-                    <span className="text-[9px] font-black text-on-surface uppercase tracking-tight">{device.device_name}</span>
-                    <span className="text-[8px] font-mono text-on-surface-variant/70">{device.device_ip} • {device.type.toUpperCase()}</span>
+                    <span className="text-[9px] font-black text-on-surface uppercase tracking-tight">{device.name}</span>
+                    <span className="text-[8px] font-mono text-on-surface-variant/70">{device.ip} • {(device.type || 'UNKNOWN').toUpperCase()}</span>
                   </div>
                 </div>
 

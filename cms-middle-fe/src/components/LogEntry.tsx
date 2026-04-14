@@ -23,11 +23,11 @@ export function LogEntry({ log, onClick }: { log: LogData, onClick: () => void }
   return (
     <div
       onClick={onClick}
-      className="relative px-3 py-2 bg-surface-container-high/40 rounded-r-sm group hover:bg-surface-container-high transition-colors border-l-0 cursor-pointer"
+      className="log-entry-item relative px-3 py-2 bg-surface-container-high/40 rounded-r-sm group hover:bg-surface-container-high transition-colors border-l-0 cursor-pointer"
     >
-      <div className={`absolute left-0 top-0 bottom-0 w-1 ${bgBorderClass}`}></div>
+      <div className={`log-entry-indicator absolute left-0 top-0 bottom-0 w-1 ${bgBorderClass}`}></div>
       <div className="flex justify-between items-start mb-1 gap-4">
-        <span className={`text-[10px] font-bold ${colorClass} uppercase flex items-center gap-1.5 shrink-0`}>
+        <span className={`log-entry-type text-[10px] font-bold ${colorClass} uppercase flex items-center gap-1.5 shrink-0`}>
           <Icon className="w-3.5 h-3.5" />
           {typeof log.log_type === 'string' ? log.log_type.toUpperCase() : 'INFO'}
         </span>

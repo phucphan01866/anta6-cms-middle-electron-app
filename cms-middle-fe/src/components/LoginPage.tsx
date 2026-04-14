@@ -71,6 +71,7 @@ const LoginPage: React.FC = () => {
 
   return (
     <Box
+      className="login-page-root"
       sx={{
         height: '100vh',
         display: 'flex',
@@ -95,8 +96,9 @@ const LoginPage: React.FC = () => {
         zIndex: 0
       }} />
 
-      <Container maxWidth="xs" sx={{ zIndex: 1 }}>
+      <Container maxWidth="xs" sx={{ zIndex: 1 }} className="login-container">
         <Paper
+          className="login-paper"
           elevation={24}
           sx={{
             p: 4,
@@ -136,8 +138,9 @@ const LoginPage: React.FC = () => {
             </Alert>
           )}
 
-          <Box component="form" onSubmit={handleLogin} sx={{ width: '100%' }}>
+          <Box component="form" onSubmit={handleLogin} sx={{ width: '100%' }} className="login-form">
             <TextField
+              className="login-email-input"
               margin="normal"
               required
               fullWidth
@@ -166,6 +169,7 @@ const LoginPage: React.FC = () => {
               }}
             />
             <TextField
+              className="login-password-input"
               margin="normal"
               required
               fullWidth
@@ -201,6 +205,7 @@ const LoginPage: React.FC = () => {
               }}
             />
             <Button
+              className="login-submit-button"
               type="submit"
               fullWidth
               variant="contained"
@@ -225,6 +230,7 @@ const LoginPage: React.FC = () => {
           </Box>
 
           <Accordion
+            className="login-backend-config"
             sx={{
               width: '100%',
               background: 'rgba(15, 23, 42, 0.4)',

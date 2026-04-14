@@ -32,13 +32,13 @@ export function ConfigExternalServer({ onSave, onClose, initialConfig }: { onSav
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-300">
+    <div className="config-external-server-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-300">
       <div
-        className="w-full max-w-md bg-surface-container-low border border-outline-variant/30 rounded-lg shadow-[0_0_50px_rgba(192,132,252,0.1)] overflow-hidden animate-in zoom-in-95 duration-300"
+        className="config-external-server-container w-full max-w-md bg-surface-container-low border border-outline-variant/30 rounded-lg shadow-[0_0_50px_rgba(192,132,252,0.1)] overflow-hidden animate-in zoom-in-95 duration-300"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-5 border-b border-outline-variant/20 bg-surface-container flex items-center justify-between">
+        <div className="config-external-server-header p-5 border-b border-outline-variant/20 bg-surface-container flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-1.5 h-8 bg-primary rounded-full shadow-[0_0_12px_rgba(192,132,252,0.5)]"></div>
             <div>
@@ -53,7 +53,7 @@ export function ConfigExternalServer({ onSave, onClose, initialConfig }: { onSav
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-8 space-y-6">
+        <form onSubmit={handleSubmit} className="config-external-server-form p-8 space-y-6">
           {/* Mode Switcher removed as per request */}
 
           <div className="space-y-1.5 group">

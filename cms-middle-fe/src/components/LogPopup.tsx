@@ -8,15 +8,15 @@ export function LogPopup({ log, onClose }: { log: LogData, onClose: () => void }
   console.log("log ", log)
   const [isShowImgRaw, setIsShowImgRaw] = useState<Boolean>(false)
   return (
-    <div onClick={onClickOutside} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
-      <div className="relative w-full max-w-3xl bg-surface-container-low border border-outline-variant/30 rounded-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in scale-up">
+    <div onClick={onClickOutside} className="log-popup-overlay fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+      <div className="log-popup-container relative w-full max-w-3xl bg-surface-container-low border border-outline-variant/30 rounded-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in scale-up">
         {/* Header */}
-        <div className="p-4 border-b border-outline-variant/20 bg-surface-container flex items-center justify-between">
+        <div className="log-popup-header p-4 border-b border-outline-variant/20 bg-surface-container flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className={`w-2 h-10 rounded-full ${log.type === 'error' ? 'bg-tertiary' :
+            {/* <div className={`w-2 h-10 rounded-full ${log.type === 'error' ? 'bg-tertiary' :
               log.type === 'warning' ? 'bg-amber-400' :
                 log.type === 'success' ? 'bg-secondary' : 'bg-primary'
-              }`}></div>
+              }`}></div> */}
             <div>
               <h3 className="text-sm font-black tracking-widest uppercase text-on-surface">{log.raw?.body?.server?.serial} / {log.raw?.body?.device_name} / DETAILED_REPORT</h3>
               <p className="text-[10px] text-on-surface-variant font-mono">{log.time} • {log.cameraIp || 'SYSTEM'}</p>
@@ -31,7 +31,7 @@ export function LogPopup({ log, onClose }: { log: LogData, onClose: () => void }
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6 bg-[#0d0d0f] custom-scrollbar">
+        <div className="log-popup-content flex-1 overflow-y-auto p-6 bg-[#0d0d0f] custom-scrollbar">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Left: Info & Metadata */}
             <div className="space-y-6">
@@ -53,7 +53,7 @@ export function LogPopup({ log, onClose }: { log: LogData, onClose: () => void }
                     { label: 'Device Name', value: log.raw?.body?.device_name },
                     { label: 'Log Type', value: log.raw?.body?.log_type },
                     { label: 'Timestamp', value: log.time },
-                    { label: 'Connection', value: log.meta }
+                    // { label: 'Connection', value: log.meta }
                   ].map(item => (
                     <div key={item.label} className="flex justify-between items-center py-1.5 border-b border-outline-variant/5">
                       <span className="text-[9px] font-bold text-on-surface-variant uppercase tracking-wider">{item.label}</span>
@@ -97,7 +97,7 @@ export function LogPopup({ log, onClose }: { log: LogData, onClose: () => void }
         </div>
 
         {/* Footer */}
-        <div className="p-4 bg-surface-container-lowest border-t border-outline-variant/20 flex justify-between items-center transition-all">
+        <div className="log-popup-footer p-4 bg-surface-container-lowest border-t border-outline-variant/20 flex justify-between items-center transition-all">
           <div className="flex items-center gap-2">
 
           </div>

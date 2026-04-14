@@ -112,7 +112,7 @@ export function StatusBar({
   }
 
   return (
-    <div className="relative border-t border-outline-variant/10 bg-surface-container-low flex flex-col h-64">
+    <div className="status-bar-container relative border-t border-outline-variant/10 bg-surface-container-low flex flex-col h-64">
       {activeTab !== 0 && (
         <button onClick={() => setIsNetworkFormOpen(true)} className={` hover:scale-110 transition-scale duration-300 z-1 cursor-pointer right-3 bottom-3 absolute rounded-lg p-2 bg-primary text-white hover:shadow-md hover:scale-105 transition-all duration-300`}>
           <Plus className="w-4 h-4" />
@@ -150,12 +150,12 @@ export function StatusBar({
           onClose={() => setIsConfigSystemOpen(false)}
         />
       )}
-      <div className="flex border-b border-outline-variant/10 px-6">
+      <div className="status-bar-tabs flex border-b border-outline-variant/10 px-6">
         {tabs.map((tab, idx) => (
           <button
             key={tab.name}
             onClick={() => setActiveTab(idx)}
-            className={`px-6 py-3 text-[10px] font-bold tracking-[0.2em] uppercase transition-all duration-300 border-b-2 ${activeTab === idx
+            className={`status-bar-tab-btn px-6 py-3 text-[10px] font-bold tracking-[0.2em] uppercase transition-all duration-300 border-b-2 ${activeTab === idx
               ? "border-primary text-primary bg-surface-container/30"
               : "border-transparent text-on-surface-variant hover:text-on-surface"
               }`}
@@ -164,7 +164,7 @@ export function StatusBar({
           </button>
         ))}
       </div>
-      <div className="flex-1 px-6 py-4 overflow-scroll custom-scrollbar relative">
+      <div className="status-bar-content flex-1 px-6 py-4 overflow-scroll custom-scrollbar relative">
         {activeTab === 0 && (
           <div className="grid grid-cols-2 gap-8 max-w-2xl animate-in fade-in duration-500">
             <div className="space-y-1">
@@ -217,7 +217,7 @@ export function StatusBar({
                     const deviceStats = deviceLogStats[serverId] || deviceLogStats[srv.id] || deviceLogStats[srv.serial] || {};
 
                     return (
-                      <div key={idx} className="bg-surface-container border border-outline-variant/10 px-4 py-4 rounded-sm border-l-4 border-l-secondary/50 shadow-sm transition-all hover:bg-surface-container-high/30">
+                      <div key={idx} className="server-item-card bg-surface-container border border-outline-variant/10 px-4 py-4 rounded-sm border-l-4 border-l-secondary/50 shadow-sm transition-all hover:bg-surface-container-high/30">
                         {/* Server Header */}
                         <div className="flex items-center justify-between border-b border-outline-variant/5">
                           <div className="flex items-center gap-3">
@@ -307,7 +307,7 @@ function UnknownDevicesCard({ orphanDevices }: { orphanDevices: { name: string; 
   if (!orphanDevices || orphanDevices.length === 0) return null;
 
   return (
-    <div className="bg-surface-container border border-outline-variant/10 px-4 py-4 rounded-sm border-l-4 border-l-tertiary/50 shadow-sm mt-4">
+    <div className="unknown-devices-card bg-surface-container border border-outline-variant/10 px-4 py-4 rounded-sm border-l-4 border-l-tertiary/50 shadow-sm mt-4">
       {/* Server Header */}
       <div className="flex items-center justify-between border-b border-outline-variant/5">
         <div className="flex items-center gap-3">
@@ -361,7 +361,7 @@ function DeviceItemRow({
   isOrphan?: boolean;
 }) {
   return (
-    <div className="flex items-center gap-4 px-3 py-2 bg-surface-container-lowest/30 rounded-md border border-outline-variant/5 hover:border-outline-variant/20 transition-colors">
+    <div className="device-item-row flex items-center gap-4 px-3 py-2 bg-surface-container-lowest/30 rounded-md border border-outline-variant/5 hover:border-outline-variant/20 transition-colors">
       <InfoTooltip content="Phân loại thiết bị" side="bottom">
         <span className={`text-[9px] font-mono min-w-[80px] text-center px-2 py-0.5 rounded-sm border shadow-[0_0_8px_rgba(var(--color-${isOrphan ? "tertiary" : "secondary"}),0.1)] ${isOrphan ? "text-tertiary bg-tertiary/10 border-tertiary/20" : "text-secondary bg-secondary/10 border-secondary/20"}`}>
           {isOrphan ? "Unknown" : (type ? type.charAt(0).toUpperCase() + type.slice(1).toLowerCase() : "Unknown")}
@@ -430,7 +430,7 @@ function SendTargetCard({ conn }: { conn: SystemConnection }) {
   const cfg = statusConfig[status] ?? statusConfig.disconnected;
 
   return (
-    <div className={`bg-surface-container border border-outline-variant/10 px-4 py-3 rounded-sm flex items-center justify-between border-l-4 ${cfg.border} transition-all hover:bg-surface-container-high/30`}>
+    <div className={`send-target-card bg-surface-container border border-outline-variant/10 px-4 py-3 rounded-sm flex items-center justify-between border-l-4 ${cfg.border} transition-all hover:bg-surface-container-high/30`}>
       <div className="flex items-start gap-4">
         <div className={`mt-1.5 flex-shrink-0 w-2 h-2 rounded-full ring-4 ${cfg.dot} ${status === 'connecting' ? 'animate-pulse' : ''}`}></div>
         <div className="flex flex-col gap-0.5">
