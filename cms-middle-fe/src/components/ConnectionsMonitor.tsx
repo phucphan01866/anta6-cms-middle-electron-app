@@ -40,17 +40,27 @@ export function ConnectionsMonitor({
   const [isInputExpanded, setIsInputExpanded] = useState(false);
   const [isOutputExpanded, setIsOutputExpanded] = useState(false);
 
-  // Group log stats per device_ip per server
+  // Group log stats strictly by server_id + server_serial + device_name + device_ip
   const deviceLogStats = useMemo(() => {
-    const stats: Record<string, Record<string, { deviceName: string; deviceIp: string; logCount: number }>> = {};
+    const stats: Record<string, { serverId: string; serverSerial: string; deviceName: string; deviceIp: string; logCount: number }> = {};
     (logs || []).forEach(log => {
-      const serverId = log.server?.server_id || log.server?.serial || 'UNKNOWN_SERVER';
-      if (!stats[serverId]) stats[serverId] = {};
-      const deviceKey = log.device_ip || log.device_name || 'UNKNOWN_DEVICE';
-      if (!stats[serverId][deviceKey]) {
-        stats[serverId][deviceKey] = { deviceName: log.device_name || 'N/A', deviceIp: log.device_ip || 'N/A', logCount: 0 };
+      const sId = log.server?.server_id || '';
+      const sSerial = log.server?.serial || '';
+      const dName = log.device_name || '';
+      const dIp = log.device_ip || '';
+
+      const key = `${sId}_${sSerial}_${dName}_${dIp}`;
+
+      if (!stats[key]) {
+        stats[key] = {
+          serverId: sId,
+          serverSerial: sSerial,
+          deviceName: dName,
+          deviceIp: dIp,
+          logCount: 0
+        };
       }
-      stats[serverId][deviceKey].logCount += 1;
+      stats[key].logCount += 1;
     });
     return stats;
   }, [logs]);
@@ -59,33 +69,30 @@ export function ConnectionsMonitor({
   const orphanDevices = useMemo(() => {
     const knownKeys = new Set<string>();
     Object.values(servers).forEach(srv => {
-      const serverId = srv.id || srv.serial || srv.server_ip || '';
-      const matchedDevices = devices[serverId] || devices[srv.id] || devices[srv.serial];
+      const sId = srv.id || '';
+      const sSerial = srv.serial || '';
+      const serverIdForDevices = srv.id || srv.serial || srv.server_ip || '';
+      const matchedDevices = devices[serverIdForDevices] || devices[srv.id] || devices[srv.serial];
+
       if (matchedDevices && matchedDevices.devices) {
         matchedDevices.devices.forEach((d: any) => {
-          if (d.ip) knownKeys.add(`${serverId}::${d.ip}`);
-          if (d.name) knownKeys.add(`${serverId}::${d.name}`);
+          const dName = d.name || '';
+          const dIp = d.ip || '';
+          knownKeys.add(`${sId}_${sSerial}_${dName}_${dIp}`);
         });
       }
     });
 
     const orphans: { name: string, ip: string, logCount: number }[] = [];
-    Object.keys(deviceLogStats).forEach(serverId => {
-      // Check if server is entirely unknown
-      const isServerUnknown = !Object.values(servers).some(s => s.id === serverId || s.serial === serverId || s.server_ip === serverId);
-
-      Object.keys(deviceLogStats[serverId]).forEach(deviceKey => {
-        const key = `${serverId}::${deviceKey}`;
-        // If server is unknown, or server is known but device is unknown
-        if (isServerUnknown || !knownKeys.has(key)) {
-          const stat = deviceLogStats[serverId][deviceKey];
-          orphans.push({
-            name: stat.deviceName,
-            ip: stat.deviceIp,
-            logCount: stat.logCount
-          });
-        }
-      });
+    Object.keys(deviceLogStats).forEach(key => {
+      if (!knownKeys.has(key)) {
+        const stat = deviceLogStats[key];
+        orphans.push({
+          name: stat.deviceName || 'UNKNOWN',
+          ip: stat.deviceIp || 'UNKNOWN',
+          logCount: stat.logCount
+        });
+      }
     });
     return orphans;
   }, [deviceLogStats, servers, devices]);
@@ -199,14 +206,13 @@ export function ConnectionsMonitor({
                         {Object.values(servers).map((srv, idx) => {
                           const serverId = srv.id || srv.serial || srv.server_ip || '';
                           const matchedDevices = devices[serverId] || devices[srv.id] || devices[srv.serial];
-                          const deviceStats = deviceLogStats[serverId] || deviceLogStats[srv.id] || deviceLogStats[srv.serial] || {};
 
                           return (
                             <ServerInputCard
                               key={idx}
                               srv={srv}
                               matchedDevices={matchedDevices}
-                              deviceStats={deviceStats}
+                              deviceLogStats={deviceLogStats}
                             />
                           );
                         })}
@@ -476,7 +482,7 @@ function SendTargetCard({ conn }: { conn: SystemConnection }) {
   );
 }
 
-function ServerInputCard({ srv, matchedDevices, deviceStats }: { srv: any, matchedDevices: any, deviceStats: any }) {
+function ServerInputCard({ srv, matchedDevices, deviceLogStats }: { srv: any, matchedDevices: any, deviceLogStats: Record<string, any> }) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
@@ -520,7 +526,13 @@ function ServerInputCard({ srv, matchedDevices, deviceStats }: { srv: any, match
           {matchedDevices && matchedDevices.devices.length > 0 ? (
             <div className="grid gap-2 border-l-2 border-outline-variant/10 pl-2 ml-1">
               {matchedDevices.devices.map((device: any, dIdx: number) => {
-                const dStats = deviceStats[device.ip] || deviceStats[device.name];
+                const sId = srv.id || '';
+                const sSerial = srv.serial || '';
+                const dName = device.name || '';
+                const dIp = device.ip || '';
+                const key = `${sId}_${sSerial}_${dName}_${dIp}`;
+
+                const dStats = deviceLogStats[key];
                 const logCount = dStats?.logCount || 0;
                 return (
                   <DeviceItemRow
