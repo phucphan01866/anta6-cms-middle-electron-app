@@ -25,6 +25,7 @@ app.use((req, res, next) => {
   };
 
   res.on('finish', () => {
+    const timestamp = new Date().toLocaleString('vi-VN');
     const durationMs = Date.now() - startedAt;
     const contentLength = res.getHeader('content-length');
 
@@ -54,9 +55,9 @@ app.use((req, res, next) => {
     const reqPart = requestText === undefined ? '' : ` | request=${requestText}`;
     const resPart = responseText === undefined ? '' : ` | response=${responseText}`;
 
-    // console.log(
-    //   `[${timestamp}] ${req.method} ${req.originalUrl}`
-    // ); 
+    console.log(
+      `[${timestamp}] ${req.method} ${req.originalUrl}`
+    );
     // console.log(
     //   `[${timestamp}] ${req.method} ${req.originalUrl} -> ${res.statusCode} (${durationMs}ms)${lengthPart}${reqPart}${resPart}`
     // ); 
@@ -100,7 +101,9 @@ app.use((req, res, next) => {
 
 app.use((req, res) => {
   if (req.originalUrl.includes('log')) {
-    return res.status(200).json({ success: true, accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFkbWluQGNtcy5jb20iLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3NzYyMTcyOTMsImV4cCI6MTc3NjIyMDg5M30.vl1sZumzy4nS4DcDTFHB2ky9P7DffOZE2MV9BMxK2y0' });
+    // return res.status(201).send({ success: true, data: { accessToken } });
+
+    return res.status(201).json({ success: true, data: { accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFkbWluQGNtcy5jb20iLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3NzYyMTcyOTMsImV4cCI6MTc3NjIyMDg5M30.vl1sZumzy4nS4DcDTFHB2ky9P7DffOZE2MV9BMxK2y0' } });
   }
   return res.status(200).json({ success: true });
 })
