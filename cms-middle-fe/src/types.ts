@@ -14,6 +14,7 @@ export interface SystemConfig {
 }
 
 export interface LogData {
+  id?: string;
   time: number;
   device_index: number;
   device_ip: string;

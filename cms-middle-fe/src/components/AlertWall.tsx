@@ -1,19 +1,19 @@
 import { useState } from 'react';
-import type { LogData, DeviceData } from '../types';
-import { CameraOff, Plus, Minus, X, Settings, MonitorSmartphone } from 'lucide-react';
+import type { DeviceData, LogData } from '../types';
+import { CameraOff, Plus, Minus, X, Settings, Camera } from 'lucide-react';
 import { CameraFeed } from './CameraFeed';
 
 export function AlertWall({
+  logs,
   cameras,
-  devices,
   onSelectLog,
   gridCols,
   setGridCols,
   grids,
   setGrids
 }: {
-  cameras: LogData[],
-  devices: Record<string, DeviceData>,
+  logs: LogData[],
+  cameras: DeviceData[],
   onSelectLog: (log: LogData) => void,
   gridCols: number,
   setGridCols: React.Dispatch<React.SetStateAction<number>>,
@@ -38,61 +38,140 @@ export function AlertWall({
     }
   }[]>>
 }) {
-  const [openDropdownIdx, setOpenDropdownIdx] = useState<number | null>(null);
   const [showGridSettings, setShowGridSettings] = useState(false);
-
   const colsBreakPoints = [5, 5];
-
+  const cameraList = cameras.flatMap(server =>
+    (server.devices || []).map(dev => ({
+      ...dev,
+      server_serial: server.server.serial,
+      server_id: server.server.server_id
+    }))
+  ).filter(dev => dev.type === "camera");
+  // KHU VỰC 1: KHUNG CONTAINER & BỐ CỤC LƯỚI (GRID LAYOUT)
+  // flex-1 để chiếm toàn bộ không gian. overflow-y-auto để cuộn nếu lưới bị quá to
   return (
     <div className="AlertWall flex-1 p-1 overflow-y-auto custom-scrollbar bg-surface-container-low/20">
       <div
         className="relative h-full w-full grid gap-0.5"
         style={{
+          // Khởi tạo kích thước grid vuông dự theo state gridCols (Ví dụ: 3x3)
           gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))`,
           gridTemplateRows: `repeat(${gridCols}, minmax(0, 1fr))`
         }}
       >
-        {Array.from({ length: Math.pow(gridCols, 2) }).map((_, idx) => {
-          const gridItem = grids[idx];
-          const camera = gridItem
-            ? cameras.find(cam => cam.server?.server_id === gridItem.device.server_id && cam.device_ip === gridItem.device.device_ip)
-            : undefined;
+        {/* KHU VỰC 2: TẠO CÁC Ô TRONG LƯỚI VÀ MAP DỮ LIỆU CAMERA VÀO TỪNG Ô */}
 
+        {/* Lặp tính toán số ô dựa theo gridCols^2 */}
+        {Array.from({ length: Math.pow(gridCols, 2) }).map((_, idx) => {
+          // gridItem: dữ liệu map cấu hình cho đúng ô chỉ số 'idx' hiện tại
+          const gridItem = grids[idx];
+          // camera: truy xuất chi tiết luồng video nếu ô này được gán device hợp lệ
+          // const camera = gridItem
+          //   ? logs.find(log =>
+          //     log.server?.server_id === gridItem.device.server_id
+          //     && log.device_ip === gridItem.device.device_ip
+          //   )
+          // Tìm camera trong mảng cameras (bản chất là các server -> bên trong có trường devices)
+          const camera = gridItem
+            ? cameraList.find(dev =>
+              dev.ip === gridItem.device.device_ip
+              && dev.name === gridItem.device.device_name
+              && dev.server_id === gridItem.device.server_id
+              && dev.server_serial === gridItem.device.server_serial
+            )
+            : undefined;
+          // const camera = undefined;
+          const cameraLog = logs.find((log) => log.device_ip === camera?.ip && log.device_name === camera?.name && log.server.server_id === camera?.server_id && log.server.serial === camera?.server_serial)
+          console.log("camera", idx, gridItem, cameraList);
+          // console.log("end here")
+          // KHU VỰC 3: LOGIC SỰ KIỆN KÉO THẢ (DRAG & DROP) CHO TỪNG Ô COMPONENT
           return (
             <div
               key={idx}
+              // Xác nhận có cho phép kéo để chuyển sang ô khác (!!! Chỉ cho phép khi có camera)
+              draggable={!!camera}
+              onDragStart={(e) => {
+                // Sự kiện bắt đầu kéo: Đóng gói JSON mang thông tin thiết bị và vị trí gốc (sourceFieldIndex) đi
+                if (!camera || !gridItem) {
+                  e.preventDefault();
+                  return;
+                }
+                e.dataTransfer.setData('application/json', JSON.stringify({
+                  ...gridItem.device,
+                  sourceFieldIndex: idx
+                }));
+              }}
               onDragOver={(e) => {
+                // PreventDefault làm cho phần Drop nhận biết được event "thả" hợp lệ
                 e.preventDefault();
+                // Bật sáng xanh (highlight class) của ô lưới lúc chuột đang lướt lên
                 e.currentTarget.classList.add('ring-2', 'ring-primary', 'ring-inset');
               }}
               onDragLeave={(e) => {
+                // Tắt sáng xanh highlight khi chuột rời đi khỏi ô
                 e.currentTarget.classList.remove('ring-2', 'ring-primary', 'ring-inset');
               }}
               onDrop={(e) => {
+                // Khi chuột chính thức nằm xuống / kết thúc thả
                 e.preventDefault();
-                e.currentTarget.classList.remove('ring-2', 'ring-primary', 'ring-inset');
+                e.currentTarget.classList.remove('ring-2', 'ring-primary', 'ring-inset'); // Xoá highlight
+
+                // Trích xuất JSON data
                 const data = e.dataTransfer.getData('application/json');
                 if (data) {
                   try {
                     const parsed = JSON.parse(data);
+
+                    // Cập nhật lại layout mảng grids
                     setGrids(prev => {
                       const clone = [...prev];
-                      clone[idx] = { gridID: idx, device: parsed };
+                      // 1. Ghi đè thông tin thiết bị từ chuột vào đúng vị trí nhận 'idx'
+                      clone[idx] = {
+                        gridID: idx,
+                        device: {
+                          server_serial: parsed.server_serial,
+                          server_id: parsed.server_id,
+                          device_ip: parsed.device_ip,
+                          device_name: parsed.device_name,
+                          device_type: parsed.device_type
+                        }
+                      };
+
+                      // 2. Nếu chuyển grid từ ô khác, xoá vị trí mảng cũ để thực hiện "Moves" - Di chuyển
+                      if (parsed.sourceFieldIndex !== undefined && parsed.sourceFieldIndex !== idx) {
+                        delete clone[parsed.sourceFieldIndex];
+                      }
+
                       return clone;
                     });
                   } catch (err) { }
                 }
               }}
-              className="relative group camera-feed-item h-full w-full bg-surface-container-low/50 border border-outline-variant/10 rounded-xs overflow-hidden transition-all"
+              className={`relative group camera-feed-item h-full w-full bg-surface-container-low/50 border border-outline-variant/10 rounded-xs overflow-hidden transition-all ${camera ? 'cursor-grab active:cursor-grabbing' : ''}`}
             >
+              {/* KHU VỰC 4: RENDER GIAO DIỆN THEO TRẠNG THÁI (ĐÃ CÓ CAMERA HOẶC TRỐNG) */}
               {camera ? (
                 <>
-                  <CameraFeed key={idx} cam={camera} onClick={() => onSelectLog(camera)} />
+                  {/* Trạng Thái 1: Nếu có video -> Gọi Component CameraFeed để Stream live */}
+                  {cameraLog && cameraLog.snapshot ? (
+                    <CameraFeed key={idx} cam={cameraLog} onClick={() => onSelectLog(cameraLog)} />
+                  ) : (
+                    <div className="no-camera w-full h-full flex flex-col items-center justify-center opacity-30 gap-[10%] text-center px-4 py-2">
+                      <Camera className={`${gridCols > colsBreakPoints[1] ? 'w-[80%] h-[80%]' : gridCols > colsBreakPoints[0] ? 'w-8 h-8' : 'w-12 h-12'} transition-all`} />
+                      <span className={`text-[11px] uppercase tracking-widest font-bold line-clamp-1 transition-all ${gridCols > colsBreakPoints[1] ? 'hidden' : ''}`}>
+                        Waiting for data stream
+                      </span>
+                    </div>
+                  )}
+                  {/* Nút (X): Nút bấm xoá Camera khỏi ô lưới đang hiển thị */}
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       setGrids(prev => {
-                        return prev.filter((_, i) => i !== idx);
+                        const clone = [...prev];
+                        // Xoá vị trí ô và không làm dịch chuyển các ô (array shift)
+                        delete clone[idx];
+                        return clone;
                       });
                     }}
                     className={`opacity-0 group-hover:opacity-100 absolute top-0 right-0 z-10 w-10 h-10 bg-gradient-to-bl from-surface-container-high/90 from-[50%] to-transparent to-[50%] hover:from-primary/90 transition-all duration-300 ease-in-out cursor-pointer text-on-surface hover:text-white group flex items-start justify-end p-[6px]`}
@@ -101,64 +180,26 @@ export function AlertWall({
                       <X className="w-full h-full" />
                     </div>
                   </button>
+                  {/* Footer hiển thị một số thông tin */}
+                  <div
+                    className={`opacity-0 group-hover:opacity-100 absolute bottom-0 left-0 z-10 w-full bg-surface-container-high/70 backdrop-blur-md shadow-[0_-5px_15px_rgba(0,0,0,0.2)] border-t border-outline-variant/10 transition-all duration-300 ease-in-out pointer-events-none text-on-surface hover:text-white px-3 py-1 text-[12px]`}
+                  >
+                    {camera.server_id} - {camera.name}
+                  </div>
                 </>
               ) : (
                 <div className="no-camera w-full h-full flex flex-col items-center justify-center opacity-30 gap-[10%] text-center px-4 py-2">
                   <CameraOff className={`${gridCols > colsBreakPoints[1] ? 'w-[80%] h-[80%]' : gridCols > colsBreakPoints[0] ? 'w-8 h-8' : 'w-12 h-12'} transition-all`} />
                   <span className={`text-[11px] uppercase tracking-widest font-bold line-clamp-1 transition-all ${gridCols > colsBreakPoints[1] ? 'hidden' : ''}`}>
-                    No incoming video streams detected
+                    No incoming data streams detected
                   </span>
-                </div>
-              )}
-              {openDropdownIdx === idx && (
-                <div className="adadlute top-8 right-1 z-20 w-56 bg-surface-container-high border border-outline-variant/50 shadow-2xl rounded-md overflow-hidden flex flex-col max-h-56 overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-150">
-                  <div className="px-3 py-2 border-b border-outline-variant/10 bg-surface-container-highest shrink-0">
-                    <span className="text-[9px] font-black uppercase tracking-widest text-on-surface-variant flex items-center gap-2">
-                      Available Devices
-                    </span>
-                  </div>
-                  {Object.values(devices).flatMap(server =>
-                    server.devices?.map(dev => (
-                      <button
-                        key={`${server.server.server_id}-${dev.ip}`}
-                        className="text-left px-3 py-2.5 text-[10px] text-on-surface hover:bg-surface-container-highest border-b border-outline-variant/10 last:border-b-0 transition-colors flex flex-col gap-0.5 group"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const newGrids = [...grids];
-                          newGrids[idx] = {
-                            gridID: idx,
-                            device: {
-                              server_serial: server.server.serial,
-                              server_id: server.server.server_id,
-                              device_ip: dev.ip,
-                              device_name: dev.name,
-                              device_type: dev.type
-                            }
-                          };
-                          setGrids(newGrids);
-                          setOpenDropdownIdx(null);
-                        }}
-                      >
-                        <div className="font-bold truncate group-hover:text-primary transition-colors">{dev.name}</div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[8px] text-on-surface-variant font-mono">{dev.ip}</span>
-                          <span className="text-[7px] px-1 py-0.5 rounded-sm bg-tertiary/10 text-tertiary uppercase tracking-wider">{dev.type || 'UNKNOWN'}</span>
-                        </div>
-                      </button>
-                    )) || []
-                  )}
-                  {(!Object.values(devices).some(s => s.devices?.length > 0)) && (
-                    <div className="flex flex-col items-center justify-center py-6 px-4 text-center gap-2 opacity-50">
-                      <MonitorSmartphone className="w-6 h-6" />
-                      <span className="text-[9px] uppercase tracking-widest font-bold">No Devices Found</span>
-                    </div>
-                  )}
                 </div>
               )}
             </div>
           );
         })}
 
+        {/* KHU VỰC 6: MENU TIỆN ÍCH NỔI BÊN GÓC PHẢI DƯỚI (SETTING GRID OVERLAY) */}
         <div className="absolute bottom-4 right-4 opacity-25 hover:opacity-100 transition-all duration-300 z-10 adlute bottom-4 right-4 flex flex-col gap-2">
           {!showGridSettings ? (
             <button
@@ -171,6 +212,7 @@ export function AlertWall({
           ) : (
             <div className="flex flex-col bg-surface-container-high/90 backdrop-blur-xl p-1.5 rounded-full border border-outline-variant/30 shadow-2xl animate-in slide-in-from-bottom-4 duration-300 zoom-in-95 fade-in">
               <div className='flex flex-col gap-2'>
+                {/* Nút Cộng: Tăng ma trận lưới thành (gridCols+1) x (gridCols+1) */}
                 <button
                   onClick={() => setGridCols(gridCols + 1)}
                   className="p-2 bg-surface-container hover:bg-surface-container-highest text-on-surface rounded-full transition-colors group cursor-pointer"
@@ -178,6 +220,7 @@ export function AlertWall({
                 >
                   <Plus className="w-4 h-4 group-hover:scale-110 transition-transform" />
                 </button>
+                {/* Nút Trừ: Giảm ma trận lưới (Tối thiểu phải còn 1x1) */}
                 <button
                   onClick={() => gridCols > 1 && setGridCols(gridCols - 1)}
                   className="p-2 bg-surface-container hover:bg-surface-container-highest text-on-surface rounded-full transition-colors group cursor-pointer"
@@ -187,6 +230,7 @@ export function AlertWall({
                 </button>
               </div>
               <div className="h-[1px] w-full bg-outline-variant/20 my-1" />
+              {/* Nút (X): Ẩn panel Setting */}
               <button
                 onClick={() => setShowGridSettings(false)}
                 className="p-2 bg-error/10 hover:bg-surface-container-highest text-error hover:text-white rounded-full transition-all duration-300 group cursor-pointer"

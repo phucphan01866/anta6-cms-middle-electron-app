@@ -4,6 +4,10 @@ import type { LogData, SystemConnection, SystemConfig, ServerData, DeviceData } 
 import apiClient from '../api/apiClient';
 import axios from 'axios';
 
+const env = {
+  MAX_LOGS_LIST: Number(import.meta.env.VITE_MAX_LOGS_LIST) || 5000
+};
+
 
 export function useSocketManager() {
   const [isConnected, setIsConnected] = useState(socket.connected);
@@ -164,7 +168,7 @@ export function useSocketManager() {
         .catch((err: any) => console.error(`[SYNC_ERROR] Failed to initiate sync:`, err));
     } else if (mode === 'receive') {
       // GỌI ĐẾN BE CỦA IP:PORT ĐỂ ĐÍCH KẾT NỐI ĐẾN SERVER HIỆN TẠI
-      axios.post(`http://${ip}:${port}/api/v1/create-connection`, 
+      axios.post(`http://${ip}:${port}/api/v1/create-connection`,
         { ip: systemConfig.be.ip, port: systemConfig.be.port, mode: 'send' },
         { headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` } }
       )
@@ -262,6 +266,7 @@ export function useSocketManager() {
       const data = raw?.data || raw;
 
       const newLog: LogData = {
+        id: crypto.randomUUID(),
         time: Math.floor(timeNumber),
         device_index: data.body?.device_index || 0,
         device_ip: data.body?.device_ip || '127.0.0.1',
@@ -279,7 +284,8 @@ export function useSocketManager() {
       if (data.ip && data.ip !== '127.0.0.1' && data.ip !== '::1') {
         updateReceiveServer(data, true);
       }
-      setLogs(prev => [newLog, ...prev].slice(0, 50));
+
+      setLogs(prev => [newLog, ...prev].slice(0, env.MAX_LOGS_LIST));
     };
 
     // Cập nhật trực tiếp vào, thêm/sửa/xóa đã nằm ở server BE

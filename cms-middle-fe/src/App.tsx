@@ -223,17 +223,6 @@ function Dashboard() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const latestCameras = useMemo(() => {
-    const camMap = new Map<string, LogData>();
-    logs.forEach(log => {
-      const key = `${log.ip}-${log.device_ip}`;
-      if (!camMap.has(key)) {
-        camMap.set(key, log);
-      }
-    });
-    return Array.from(camMap.values()).slice(0, 6);
-  }, [logs]);
-
   return (
     <div className="app-dashboard-root flex flex-col h-screen overflow-hidden bg-background text-on-surface font-sans selection:bg-primary/30 antialiased">
       <main className="app-dashboard-main flex-1 grid grid-cols-4 gap-0 overflow-hidden">
@@ -256,11 +245,11 @@ function Dashboard() {
                 <h2 className={`text-[10px] font-bold tracking-[0.2em] uppercase ${mainTab === 'connections' ? 'text-primary' : 'text-on-surface'}`}>Connections Monitor</h2>
               </button>
             </div>
-
+            {/* <button onClick={() => console.log(servers)}>CLick</button> */}
             {mainTab === 'alert' ? (
               <AlertWall
-                cameras={latestCameras}
-                devices={devices}
+                logs={logs}
+                cameras={Object.values(devices).flatMap(server => server || [])}
                 onSelectLog={setSelectedLog}
                 gridCols={gridCols}
                 setGridCols={setGridCols}
@@ -307,7 +296,7 @@ function Dashboard() {
               onClick={() => setRightTab('logs')}
               className={`h-full flex-3 py-3 text-[10px] tracking-widest font-bold uppercase transition-colors flex items-center justify-center gap-2 ${rightTab === 'logs' ? 'text-primary border-b-2 border-primary bg-primary/5' : 'text-on-surface-variant hover:bg-surface-container-low/50 border-b-2 border-transparent'}`}
             >
-              <Terminal className="w-3.5 h-3.5" />Logs
+              <Terminal className="w-3.5 h-3.5" />Logs ({logs.length})
             </button>
             <button
               onClick={() => setRightTab('devices')}
@@ -337,7 +326,7 @@ function Dashboard() {
                 {filteredLogs.length > 0 ? (
                   <div className="flex flex-col">
                     {filteredLogs.map((log, idx) => (
-                      <div key={idx} className="border-b border-outline-variant/5">
+                      <div key={log.id || idx} className="border-b border-outline-variant/5">
                         <LogEntry log={log} onClick={() => setSelectedLog(log)} />
                       </div>
                     ))}
@@ -355,7 +344,7 @@ function Dashboard() {
               <div className="text-[9px] uppercase tracking-widest text-on-surface-variant mb-2 text-center opacity-50 font-bold sticky top-0 py-1">Drag items to assign to grid cells</div>
               {Object.values(devices).flatMap(server => server.devices?.map(dev => (
                 <div
-                  key={`${server.server.server_id}-${dev.ip}`}
+                  key={`${server.server.server_id}-${dev.ip}-${dev.name}`}
                   draggable
                   onDragStart={(e) => {
                     e.dataTransfer.setData('application/json', JSON.stringify({
