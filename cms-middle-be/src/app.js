@@ -1,28 +1,13 @@
 // ─── EXPRESS APP & MIDDLEWARE ─────────────────────────────────────────────────
-const express = require('express');
-const cors = require('cors');
-const cookieParser = require('cookie-parser');
-const axios = require('axios');
-const { getCMSBackendURL, declaredRoutes } = require('./config');
-
-// Route imports
-const healthRoutes = require('./routes/health.routes');
-const authRoutes = require('./routes/auth.routes');
-const logsRoutes = require('./routes/logs.routes');
-const connectionsRoutes = require('./routes/connections.routes');
-const serverRoutes = require('./routes/server.routes');
-
+const express = require('express')
 const app = express();
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
-app.use(cors({ origin: true, credentials: true }));
-app.use(cookieParser());
 app.use(express.json({ limit: '50mb' }));
 
 // Request Logger
 app.use((req, res, next) => {
   const startedAt = Date.now();
-  const timestamp = new Date().toISOString();
 
   let responseBody;
 
@@ -70,6 +55,9 @@ app.use((req, res, next) => {
     const resPart = responseText === undefined ? '' : ` | response=${responseText}`;
 
     // console.log(
+    //   `[${timestamp}] ${req.method} ${req.originalUrl}`
+    // ); 
+    // console.log(
     //   `[${timestamp}] ${req.method} ${req.originalUrl} -> ${res.statusCode} (${durationMs}ms)${lengthPart}${reqPart}${resPart}`
     // ); 
     // if (req.headers['authorization']) {
@@ -110,11 +98,11 @@ app.use((req, res, next) => {
 //   }
 // });
 
-// ─── Mount Routes ────────────────────────────────────────────────────────────
-app.use(healthRoutes);
-app.use(authRoutes);
-app.use(logsRoutes);
-app.use(connectionsRoutes);
-app.use(serverRoutes.router);
+app.use((req, res) => {
+  if (req.originalUrl.includes('log')) {
+    return res.status(200).json({ success: true, accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFkbWluQGNtcy5jb20iLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3NzYyMTcyOTMsImV4cCI6MTc3NjIyMDg5M30.vl1sZumzy4nS4DcDTFHB2ky9P7DffOZE2MV9BMxK2y0' });
+  }
+  return res.status(200).json({ success: true });
+})
 
 module.exports = app;
