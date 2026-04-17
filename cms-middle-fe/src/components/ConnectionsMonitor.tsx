@@ -354,19 +354,17 @@ function DeviceItemRow({
   const isDisconnected = connectionStatus === 'disconnected';
 
   return (
-    <div className={`device-item-row flex items-center gap-4 px-3 py-2 bg-surface-container-lowest/40 rounded border transition-colors ${
-      isDisconnected
+    <div className={`device-item-row flex items-center gap-4 px-3 py-2 bg-surface-container-lowest/40 rounded border transition-colors ${isDisconnected
         ? 'border-tertiary/20 bg-tertiary/5'
         : 'border-outline-variant/5 hover:border-outline-variant/20'
-    }`}>
+      }`}>
       {/* Connection status dot */}
       {connectionStatus && (
         <InfoTooltip content={isConnected ? 'Đang kết nối' : 'Mất kết nối'} side="bottom">
-          <div className={`w-2 h-2 rounded-full shrink-0 ring-2 ${
-            isConnected
+          <div className={`w-2 h-2 rounded-full shrink-0 ring-2 ${isConnected
               ? 'bg-secondary ring-secondary/20'
               : 'bg-tertiary ring-tertiary/20 animate-pulse'
-          }`}></div>
+            }`}></div>
         </InfoTooltip>
       )}
       <InfoTooltip content="Phân loại thiết bị" side="bottom">
@@ -375,9 +373,8 @@ function DeviceItemRow({
         </span>
       </InfoTooltip>
       <InfoTooltip content="Tên Thiết bị" side="bottom">
-        <span className={`text-[11px] font-bold tracking-wide flex-1 truncate max-w-[200px] block ${
-          isDisconnected ? 'text-on-surface-variant/50' : 'text-on-surface-variant'
-        }`}>{name}</span>
+        <span className={`text-[11px] font-bold tracking-wide flex-1 truncate max-w-[200px] block ${isDisconnected ? 'text-on-surface-variant/50' : 'text-on-surface-variant'
+          }`}>{name}</span>
       </InfoTooltip>
       <div className="flex w-full items-center justify-between gap-4">
         <InfoTooltip content="IP Thiết bị" side="bottom">
@@ -553,35 +550,31 @@ function ServerInputCard({ srv, matchedDevices, deviceLogStats }: { srv: any, ma
           <div className="flex flex-col gap-0.5">
             <div className="flex items-center gap-2">
               <InfoTooltip content="Tên Server">
-                <span className={`text-[14px] font-black tracking-wide leading-none group-hover:text-primary transition-colors ${
-                  isDisconnected ? 'text-on-surface/60' : 'text-on-surface'
-                }`}>{srv.server_name || srv.id}</span>
+                <span className={`text-[14px] font-black tracking-wide leading-none group-hover:text-primary transition-colors ${isDisconnected ? 'text-on-surface/60' : 'text-on-surface'
+                  }`}>{srv.server_name || srv.id}</span>
               </InfoTooltip>
               {/* Connection Status Badge */}
               <InfoTooltip content={isDisconnected ? 'Server mất kết nối' : 'Server đang hoạt động'}>
-                <span className={`inline-flex items-center gap-1 text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-sm border ${
-                  isDisconnected
+                <span className={`inline-flex items-center gap-1 text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-sm border ${isDisconnected
                     ? 'text-tertiary bg-tertiary/10 border-tertiary/20'
                     : 'text-secondary bg-secondary/10 border-secondary/20'
-                }`}>
-                  <span className={`w-1.5 h-1.5 rounded-full ${
-                    isDisconnected
+                  }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${isDisconnected
                       ? 'bg-tertiary animate-pulse'
                       : 'bg-secondary'
-                  }`}></span>
+                    }`}></span>
                   {isDisconnected ? 'OFFLINE' : 'ONLINE'}
                 </span>
               </InfoTooltip>
               {/* Server Type Badge */}
               {serverType && (
                 <InfoTooltip content={serverType === 'direct' ? 'Kết nối trực tiếp' : 'Kết nối qua trung gian'}>
-                  <span className={`inline-flex items-center gap-1 text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-sm border ${
-                    serverType === 'direct'
+                  <span className={`inline-flex items-center gap-1 text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-sm border ${serverType === 'direct'
                       ? 'text-primary bg-primary/10 border-primary/20'
                       : 'text-on-surface-variant bg-surface-container-high border-outline-variant/20'
-                  }`}>
+                    }`}>
                     {serverType === 'direct' ? <ArrowDownLeft className="w-2.5 h-2.5" /> : <ArrowUpRight className="w-2.5 h-2.5" />}
-                    {serverType}
+                    {serverType === 'direct' ? 'SVMS' : 'CMS FORWARDED'}
                   </span>
                 </InfoTooltip>
               )}
