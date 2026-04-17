@@ -6,8 +6,9 @@
 // ──────────────────────────────────────────────────────────────────────────────
 
 const net = require('net');
+const axios = require('axios');
 const { servers, devices, getClientSockets } = require('../socketState');
-const { SVMS_PORT_LIST, CONNECTIVITY_TIMEOUT_MS } = require('../config');
+const { SVMS_PORT_LIST, CONNECTIVITY_TIMEOUT_MS, port: localPort } = require('../config');
 
 // Internal timer stores
 const serverTimers = new Map();   // Map<serverId, NodeJS.Timeout> — cho forwarded servers
@@ -101,28 +102,38 @@ function resetServerTimer(serverId) {
       return;
     }
 
-    const ip = serverEntry.svms_ipv4_ip || serverEntry.server_ip || serverEntry.sender_ip;
-    if (!ip) {
-      console.warn(`[CONNECTIVITY] No IP for forwarded server ${serverId}, skipping check`);
+    const senderIp = serverEntry.sender_ip;
+    if (!senderIp) {
+      console.warn(`[CONNECTIVITY] No sender IP for forwarded server ${serverId}, skipping check`);
       return;
     }
 
-    console.log(`[CONNECTIVITY] Checking forwarded server ${serverId} (${ip}) — TCP ping ports: ${SVMS_PORT_LIST.join(', ')}`);
+    const senderPort = serverEntry.port || 5050; // Dự phòng fallback về 5050 nếu không biết port
+    const myIp = process.env.LOCAL_IP || '127.0.0.1';
 
-    // TCP ping tất cả SVMS ports song song (giống startMonitoring)
-    const results = await Promise.all(
-      SVMS_PORT_LIST.map(port => tcpPing(ip, port))
-    );
-    const anyAlive = results.some(ok => ok);
+    console.log(`[CONNECTIVITY] Checking forwarded server ${serverId} from sender ${senderIp}:${senderPort} via healthcheck`);
 
-    if (anyAlive) {
-      // Server vẫn alive nhưng không gửi log → giữ connected, reset timer vô hạn (#9)
-      console.log(`[CONNECTIVITY] Forwarded server ${serverId} still alive, resetting timer`);
+    let isLogged = false;
+    try {
+      const response = await axios.get(`http://${senderIp}:${senderPort}/healthcheck`, {
+        params: { ip: myIp, port: localPort },
+        timeout: 5000
+      });
+      if (response.data && response.data.isLogged) {
+        isLogged = true;
+      }
+    } catch (err) {
+      console.log(`[CONNECTIVITY] Healthcheck to sender ${senderIp} failed: ${err.message}`);
+    }
+
+    if (isLogged) {
+      // Sender vẫn tồn tại kết nối tới receiver → giữ connected, reset timer
+      console.log(`[CONNECTIVITY] Forwarded server ${serverId} still logged in sender, resetting timer`);
       resetServerTimer(serverId);
     } else {
-      // Tất cả ports fail → disconnected
+      // Healthcheck fail HOẶC returns isLogged = false → disconnected
       if (serverEntry.connectionStatus !== 'disconnected') {
-        console.log(`[CONNECTIVITY] ❌ Forwarded server ${serverId} DISCONNECTED (all ports unreachable)`);
+        console.log(`[CONNECTIVITY] ❌ Forwarded server ${serverId} DISCONNECTED (sender removed connection or unreachable)`);
         serverEntry.connectionStatus = 'disconnected';
         emitServerStatus(serverId, 'disconnected');
         forwardStatusUpdate(serverId);

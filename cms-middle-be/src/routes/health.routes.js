@@ -12,8 +12,17 @@ const router = express.Router();
  * @returns {object} 200 - { status: 'OK' }
  */
 router.get('/healthcheck', (req, res) => {
-  console.log("healcheck called from ", req.originalUrl)
-  res.status(200).send({ status: 'OK' })
+  console.log("healcheck called from ", req.originalUrl);
+  const { ip, port } = req.query;
+
+  let isLogged = false;
+  if (ip && port) {
+    const targetUrl = `http://${ip}:${port}`;
+    const exists = connections.find(c => c.url === targetUrl && c.mode === 'send');
+    isLogged = !!exists;
+  }
+
+  res.status(200).send({ status: 'OK', isLogged });
 });
 
 const authMiddleware = require('../middleware/auth.middleware');
