@@ -11,6 +11,7 @@ const authRoutes = require('./routes/auth.routes');
 const logsRoutes = require('./routes/logs.routes');
 const connectionsRoutes = require('./routes/connections.routes');
 const serverRoutes = require('./routes/server.routes');
+const { getClientSockets } = require('./socketState');
 
 const app = express();
 
@@ -72,9 +73,9 @@ app.use((req, res, next) => {
     // console.log(
     //   `[${timestamp}] ${req.method} ${req.originalUrl} -> ${res.statusCode} (${durationMs}ms)${lengthPart}${reqPart}${resPart}`
     // ); 
-    console.log(
-      `[LOGGER] - [${timestamp}] ${req.method} ${req.originalUrl}`
-    );
+    // console.log(
+    //   req
+    // );
     // if (req.headers['authorization']) {
     //   console.log(`[${timestamp}] Auth Header: ${req.headers['authorization']}`);
     // }
@@ -86,9 +87,10 @@ app.use((req, res, next) => {
     //     `[${timestamp}] ${req.method} ${req.originalUrl} -> ${res.statusCode} (${durationMs}ms)${lengthPart}${reqPart}${resPart}`
     //   );
     // }
-    // if (req.originalUrl === '/api/v1/server') {
-    //   console.log(`[Sender: ${req.ip}:${req.socket.remotePort}]`, req.body);
-    // }
+    if (req.originalUrl === '/api/v1/server') {
+      // console.log(`[Sender: ${req.ip}:${req.socket.remotePort}]`, req.body);
+      console.log(req.headers)
+    }
     // // console.log(req.originalUrl);
     // if (req.originalUrl === '/api/v1/devices') {
     //   // console.log(req.body);
@@ -99,6 +101,46 @@ app.use((req, res, next) => {
   next();
 });
 
+// app.use((req, res, next) => {
+//   const socket = req.socket;
+
+//   console.log({
+//     ip: req.ip,
+//     port: socket.remotePort,           // ephemeral port của A
+//     isAlive: !socket.destroyed && socket.writable,
+//     bytesRead: socket.bytesRead,
+//     bytesWritten: socket.bytesWritten
+//   });
+
+//   // Lắng nghe disconnect
+//   socket.once('close', () => {
+//     console.log(`Port ${socket.remotePort} của ${req.ip} đã đóng`);
+//   });
+
+//   socket.on('error', (err) => {
+//     console.log(`Socket error trên port ${socket.remotePort}:`, err.message);
+//   });
+
+//   next();
+// });
+
+const routes = ['/api/v1/login',
+  '/api/v1/logs',
+  '/healthcheck',
+  '/api/v1/create-connection',
+  '/api/v1/remove-connection',
+  '/api/v1/connections',
+  '/server-information',
+  '/api/v1/server',
+  '/api/v1/devices'
+]
+
+app.use((req, res, next) => {
+  if (routes.includes(res.originalUrl)) {
+    getClientSockets().emit('test', req.originalUrl);
+  }
+  next();
+})
 
 // // Auto-forward logic cho các route không khai báo trong file này
 // app.use(async (req, res, next) => {

@@ -3,36 +3,39 @@ const cron = require('node-cron');
 const { servers } = require('../socketState');
 const { port: defaultPort } = require('../config');
 
+// Danh sách các cổng cần kiểm tra theo yêu cầu
+const TARGET_PORTS = [17221, 17222, 7500, 48021];
+
 /**
  * Pings a server using TCP connection
  * @param {string} ip 
  * @param {number} port 
- * @returns {Promise<{online: boolean, duration?: number}>}
+ * @returns {Promise<{online: boolean, duration?: number, port: number}>}
  */
 const pingServer = (ip, port) => {
   return new Promise((resolve) => {
     const socket = new net.Socket();
     const startTime = Date.now();
-    
+
     // 3 seconds timeout for ping
     socket.setTimeout(3000);
-    
+
     socket.on('connect', () => {
       const duration = Date.now() - startTime;
       socket.destroy();
-      resolve({ online: true, duration });
+      resolve({ online: true, duration, port });
     });
-    
+
     socket.on('error', () => {
       socket.destroy();
-      resolve({ online: false });
+      resolve({ online: false, port });
     });
-    
+
     socket.on('timeout', () => {
       socket.destroy();
-      resolve({ online: false });
+      resolve({ online: false, port });
     });
-    
+
     socket.connect(port, ip);
   });
 };
@@ -41,37 +44,48 @@ const pingServer = (ip, port) => {
  * Starts the background monitoring task
  */
 const startMonitoring = () => {
-  console.log('⏲️  Monitoring service initialized (30s interval)');
-  
+  console.log(`⏲️  Monitoring service initialized (30s interval). Testing ports: ${TARGET_PORTS.join(', ')}`);
+
   // Run every 30 seconds
   cron.schedule('*/30 * * * * *', async () => {
     const timestamp = new Date().toLocaleString();
-    
+
     if (servers.size === 0) {
       // console.log(`[${timestamp}] [MONITOR] No servers registered to ping.`);
       return;
     }
 
-    console.log(`\n[${timestamp}] 📡 SERVER HEALTH CHECK (${servers.size} servers)`);
-    
-    const results = [];
+    console.log(`\n[${timestamp}] 📡 MULTI-PORT HEALTH CHECK (${servers.size} servers)`);
+
+    const checkPromises = [];
+
     for (const [id, serverData] of servers.entries()) {
       const ip = serverData.server_ip || serverData.sender_ip;
-      // Use server_port if available, otherwise fallback to BE default port
-      const port = serverData.server_port || defaultPort;
       const name = serverData.server_name || id;
-      
-      const res = await pingServer(ip, port);
-      results.push({
-        Server: name,
-        Address: `${ip}:${port}`,
-        Status: res.online ? '✅ ONLINE' : '❌ OFFLINE',
-        Latency: res.duration ? `${res.duration}ms` : '-'
+
+      // Với mỗi server, tạo promise kiểm tra cho tất cả các port mục tiêu
+      TARGET_PORTS.forEach(port => {
+        checkPromises.push(
+          pingServer(ip, port + 1).then(res => ({
+            Server: name,
+            IP: ip,
+            Port: port,
+            Status: res.online ? '✅ ONLINE' : '❌ OFFLINE',
+            Latency: res.duration ? `${res.duration}ms` : '-'
+          }))
+        );
       });
     }
-    
-    console.table(results);
+
+    // Chờ tất cả các kết quả hoàn tất song song
+    const allResults = await Promise.all(checkPromises);
+
+    // Sắp xếp kết quả để dễ quan sát
+    allResults.sort((a, b) => a.Server.localeCompare(b.Server) || a.Port - b.Port);
+
+    console.table(allResults);
   });
 };
 
 module.exports = { startMonitoring };
+

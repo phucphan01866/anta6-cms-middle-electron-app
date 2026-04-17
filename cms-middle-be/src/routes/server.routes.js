@@ -129,7 +129,7 @@ router.post('/api/v1/devices', async (req, res) => {
       sender_ip: senderIp,
       lastSeen: new Date().toISOString()
     });
-    console.log(`[DEVICES_INFO] Saved ${(deviceList || []).length} devices for ${serverId}`);
+    // console.log(`[DEVICES_INFO] Saved ${(deviceList || []).length} devices for ${serverId}`);
   }
 
   // Emit toàn bộ devices hiện tại tới FE một lần

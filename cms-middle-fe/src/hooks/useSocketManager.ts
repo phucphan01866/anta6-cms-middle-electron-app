@@ -321,7 +321,8 @@ export function useSocketManager() {
     socket.on('receive-devices-information', onReceiveDevicesInformation);
     socket.on('update-connections', onUpdateConnections);
     socket.on('test', (data) => {
-      console.log('test data', data)
+      // console.log('test data', data)
+      alert('we got new url: ' + data);
     })
 
     return () => {
