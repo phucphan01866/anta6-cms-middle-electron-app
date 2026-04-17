@@ -83,6 +83,7 @@ router.post('/api/v1/server', async (req, res) => {
 
   // TODO: BOOKMARK — logic phân biệt direct/forwarded, có thể sửa sau
   const isForwarded = req.headers['x-sync-forwarded'] === 'true';
+  console.log(isForwarded)
   const serverType = isForwarded ? 'forwarded' : 'direct';
 
   for (const serverData of dataArr) {
