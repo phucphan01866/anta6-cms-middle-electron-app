@@ -16,7 +16,11 @@
     "__pycache__",
     "vendor",
     "target",
-    "build"
+    "build",
+    "preload.js",
+    "cms-middle-fe/eslint.config.js",
+    "cms-middle-fe/vite.config.ts",
+    "cms-middle-fe/src/App-FromStudio.tsx"
   ],
-  "lastPush": "2026-04-09T15:28:10.083Z"
+  "lastPush": "2026-04-17T11:00:15.657Z"
 }
