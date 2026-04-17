@@ -136,6 +136,18 @@ function resetServerTimer(serverId) {
         console.log(`[CONNECTIVITY] ❌ Forwarded server ${serverId} DISCONNECTED (sender removed connection or unreachable)`);
         serverEntry.connectionStatus = 'disconnected';
         emitServerStatus(serverId, 'disconnected');
+        
+        // Disconnect TẤT CẢ devices thuộc forwarded server này
+        const deviceEntry = devices.get(serverId);
+        if (deviceEntry && deviceEntry.devices) {
+          for (const d of deviceEntry.devices) {
+            if (d.connectionStatus !== 'disconnected') {
+              d.connectionStatus = 'disconnected';
+              emitDeviceStatus(serverId, d.index, 'disconnected');
+            }
+          }
+        }
+
         forwardStatusUpdate(serverId);
       }
     }
