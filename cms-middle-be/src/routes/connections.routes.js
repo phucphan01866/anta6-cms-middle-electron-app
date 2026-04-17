@@ -158,7 +158,6 @@ router.post('/api/v1/reconnect-connection', async (req, res) => {
     existing.status = 'disconnected';
     notifyStatusToClients(url, existing.mode, 'disconnected');
   }
-
   syncConnectionsToFrontend();
 })
 

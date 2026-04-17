@@ -229,7 +229,11 @@ async function syncDataToTarget(url, accessToken) {
 
   // 1. Gửi TẤT CẢ servers trong 1 array
   if (servers.size > 0) {
-    const serversArray = Array.from(servers.values());
+    // Đánh dấu server type = 'direct'
+    const serversArray = Array.from(servers.values()).map(server => ({
+      ...server,
+      type: 'direct'
+    }));
     try {
       await axios.post(`${url}/api/v1/server`, serversArray, { headers, timeout: 5000 });
       console.log(`[SYNC_DATA] Sent ${serversArray.length} servers inside 1 array to ${url}`);
