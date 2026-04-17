@@ -1,10 +1,10 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { StatusBar } from './components/StatusBar/StatusBar';
 import { ConnectionsMonitor } from './components/ConnectionsMonitor';
 import { LogPopup } from './components/LogPopup';
 import { useSocketManager } from './hooks/useSocketManager';
-import { SlidersHorizontal, Terminal, Check, Cpu, MonitorSmartphone, Camera, CameraOff, Plus, Minus, X, Settings, Monitor, Network } from 'lucide-react';
+import { SlidersHorizontal, Terminal, Check, Cpu, MonitorSmartphone, Camera, CameraOff, Plus, Minus, X, Settings, Monitor, Network, PanelRightOpen, PanelRightClose } from 'lucide-react';
 import { LogEntry } from './components/LogEntry';
 import { CameraFeed } from './components/CameraFeed';
 import type { LogData, ServerData, DeviceData } from './types';
@@ -67,7 +67,7 @@ function LogFilter({
 
   return (
     <div ref={ref} className="app-log-filter relative">
-      <button onClick={() => console.log(deviceList)}>TEST HERE CLICK ME</button>
+      {/* <button className='absolute bottom-3 right-3' onClick={() => console.log(deviceList)}>TEST HERE CLICK ME</button> */}
       <button
         onClick={() => setOpen(v => !v)}
         className={`app-log-filter-btn flex items-center gap-1.5 px-2 py-1 rounded-md transition-all duration-200 group border ${activeCount > 0
@@ -82,7 +82,6 @@ function LogFilter({
           </span>
         )}
       </button>
-
       {open && (
         <div className="absolute right-0 top-full mt-2 z-50 bg-surface-container-high border border-outline-variant/90 shadow-2xl rounded-lg w-64 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
 
@@ -181,6 +180,9 @@ function Dashboard() {
   const [rightTab, setRightTab] = useState<'logs' | 'devices'>('logs');
   const [mainTab, setMainTab] = useState<'alert' | 'connections'>('alert');
   const [gridCols, setGridCols] = useState<number>(3);
+  const [rightPanelVisible, setRightPanelVisible] = useState(true);
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+  const isNarrow = windowWidth < 800;
   const [grids, setGrids] = useState<{
     gridID: number,
     device: {
@@ -224,22 +226,29 @@ function Dashboard() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  // Track window width for responsive layout
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   return (
     <div className="app-dashboard-root flex flex-col h-screen overflow-hidden bg-background text-on-surface font-sans selection:bg-primary/30 antialiased">
-      <main className="app-dashboard-main flex-1 grid grid-cols-4 gap-0 overflow-hidden">
+      <main className={`app-dashboard-main flex-1 overflow-hidden ${isNarrow ? 'flex flex-col' : 'grid grid-cols-4 gap-0'}`}>
         {/* Main Section */}
-        <div className="app-dashboard-left-section col-span-3 grid grid-rows-[1fr] overflow-hidden bg-background h-full border-r border-outline-variant/20">
+        <div className={`app-dashboard-left-section overflow-hidden bg-background border-outline-variant/20 ${isNarrow ? 'flex-1 border-b' : 'col-span-3 grid grid-rows-[1fr] h-full border-r'}`}>
           <div className="flex flex-col overflow-hidden h-full">
-            <div className="px-6 flex items-center gap-4 border-b border-outline-variant/10 shrink-0">
+            <div className={`flex items-center border-b border-outline-variant/10 shrink-0 ${isNarrow ? '' : 'px-6 gap-4'}`}>
               <button
-                className={`flex items-center gap-2 px-3 py-4 border-b-2 transition-all ${mainTab === 'alert' ? 'border-primary' : 'border-transparent opacity-60 hover:opacity-100 hover:bg-surface-container/50'}`}
+                className={`flex items-center gap-2 px-3 py-4 border-b-2 transition-all ${isNarrow ? 'flex-1 justify-center' : ''} ${mainTab === 'alert' ? 'border-primary' : 'border-transparent opacity-60 hover:opacity-100 hover:bg-surface-container/50'}`}
                 onClick={() => setMainTab('alert')}
               >
                 <Monitor className={`w-5 h-5 ${mainTab === 'alert' ? 'text-primary' : 'text-on-surface'}`} />
                 <h2 className={`text-[10px] font-bold tracking-[0.2em] uppercase ${mainTab === 'alert' ? 'text-primary' : 'text-on-surface'}`}>Alert Wall</h2>
               </button>
               <button
-                className={`flex items-center gap-2 px-3 py-4 border-b-2 transition-all ${mainTab === 'connections' ? 'border-primary' : 'border-transparent opacity-60 hover:opacity-100 hover:bg-surface-container/50'}`}
+                className={`flex items-center gap-2 px-3 py-4 border-b-2 transition-all ${isNarrow ? 'flex-1 justify-center' : ''} ${mainTab === 'connections' ? 'border-primary' : 'border-transparent opacity-60 hover:opacity-100 hover:bg-surface-container/50'}`}
                 onClick={() => setMainTab('connections')}
               >
                 <Network className={`w-5 h-5 ${mainTab === 'connections' ? 'text-primary' : 'text-on-surface'}`} />
@@ -290,8 +299,23 @@ function Dashboard() {
           </div> */}
         </div>
 
-        {/* Right Section */}
-        <aside className="app-dashboard-right-section col-span-1 bg-surface-container-lowest flex flex-col overflow-hidden shadow-2xl relative z-10 w-full">
+        {/* Right Section — fixed bottom drawer on narrow screens */}
+        {isNarrow && (
+          <button
+            onClick={() => setRightPanelVisible(v => !v)}
+            className="app-right-panel-toggle fixed bottom-4 right-4 z-50 flex items-center gap-1.5 px-3 py-2 rounded-full bg-primary text-white shadow-lg text-[11px] font-bold tracking-wide transition-all hover:bg-primary/90 active:scale-95"
+          >
+            {rightPanelVisible
+              ? <><PanelRightClose className="w-4 h-4" /></>
+              : <><PanelRightOpen className="w-4 h-4" /></>}
+          </button>
+        )}
+        <aside
+          className={`app-dashboard-right-section bg-surface-container-lowest flex flex-col overflow-hidden shadow-2xl z-10 transition-transform duration-300 ${isNarrow
+            ? `fixed bottom-0 left-0 right-0 h-1/4 border-t border-outline-variant/20 ${rightPanelVisible ? 'translate-y-0' : 'translate-y-full'}`
+            : 'col-span-1 relative w-full'
+            }`}
+        >
           <div className="flex items-center border-b border-outline-variant/10 shrink-0">
             <button
               onClick={() => setRightTab('logs')}
