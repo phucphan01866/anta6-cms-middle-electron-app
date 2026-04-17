@@ -233,7 +233,7 @@ async function syncDataToTarget(url, accessToken) {
     // Đánh dấu server type = 'direct'
     const serversArray = Array.from(servers.values()).map(server => ({
       ...server,
-      type: 'direct'
+      type: 'forwarded'
     }));
     try {
       await axios.post(`${url}/api/v1/server`, serversArray, { headers, timeout: 5000 });
