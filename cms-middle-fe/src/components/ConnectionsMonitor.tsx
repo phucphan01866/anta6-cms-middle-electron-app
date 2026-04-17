@@ -355,15 +355,15 @@ function DeviceItemRow({
 
   return (
     <div className={`device-item-row flex items-center gap-4 px-3 py-2 bg-surface-container-lowest/40 rounded border transition-colors ${isDisconnected
-        ? 'border-tertiary/20 bg-tertiary/5'
-        : 'border-outline-variant/5 hover:border-outline-variant/20'
+      ? 'border-tertiary/20 bg-tertiary/5'
+      : 'border-outline-variant/5 hover:border-outline-variant/20'
       }`}>
       {/* Connection status dot */}
       {connectionStatus && (
         <InfoTooltip content={isConnected ? 'Đang kết nối' : 'Mất kết nối'} side="bottom">
           <div className={`w-2 h-2 rounded-full shrink-0 ring-2 ${isConnected
-              ? 'bg-secondary ring-secondary/20'
-              : 'bg-tertiary ring-tertiary/20 animate-pulse'
+            ? 'bg-secondary ring-secondary/20'
+            : 'bg-tertiary ring-tertiary/20 animate-pulse'
             }`}></div>
         </InfoTooltip>
       )}
@@ -547,47 +547,46 @@ function ServerInputCard({ srv, matchedDevices, deviceLogStats }: { srv: any, ma
           <div className={`p-2 ${iconBg} rounded-lg shrink-0 relative`}>
             <Cpu className={`w-4 h-4 ${iconColor}`} />
           </div>
-          <div className="flex flex-col gap-0.5">
-            <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
+            <div className='flex flex-col'>
               <InfoTooltip content="Tên Server">
                 <span className={`text-[14px] font-black tracking-wide leading-none group-hover:text-primary transition-colors ${isDisconnected ? 'text-on-surface/60' : 'text-on-surface'
                   }`}>{srv.server_name || srv.id}</span>
               </InfoTooltip>
-              {/* Connection Status Badge */}
-              <InfoTooltip content={isDisconnected ? 'Server mất kết nối' : 'Server đang hoạt động'}>
-                <span className={`inline-flex items-center gap-1 text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-sm border ${isDisconnected
-                    ? 'text-tertiary bg-tertiary/10 border-tertiary/20'
-                    : 'text-secondary bg-secondary/10 border-secondary/20'
+              <div className='flex gap-3'>
+                <InfoTooltip content="Mã định danh Server (Server ID)">
+                  <span className="text-[10px] font-mono text-on-surface-variant uppercase">{srv.id || srv.serial}</span>
+                </InfoTooltip>
+                <InfoTooltip content="Địa chỉ IP gốc của Server">
+                  <span className="text-[10px] font-mono text-on-surface-variant uppercase">IP: {srv.svms_ipv4_ip || srv.server_ip || srv.sender_ip}</span>
+                </InfoTooltip>
+              </div>
+            </div>
+            {/* Connection Status Badge */}
+            <InfoTooltip content={isDisconnected ? 'Server mất kết nối' : 'Server đang hoạt động'}>
+              <span className={`inline-flex items-center gap-1 text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-sm border ${isDisconnected
+                ? 'text-tertiary bg-tertiary/10 border-tertiary/20'
+                : 'text-secondary bg-secondary/10 border-secondary/20'
+                }`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${isDisconnected
+                  ? 'bg-tertiary animate-pulse'
+                  : 'bg-secondary'
+                  }`}></span>
+                {isDisconnected ? 'OFFLINE' : 'ONLINE'}
+              </span>
+            </InfoTooltip>
+            {/* Server Type Badge */}
+            {serverType && (
+              <InfoTooltip content={serverType === 'direct' ? 'Kết nối trực tiếp' : 'Kết nối qua trung gian'}>
+                <span className={`inline-flex items-center gap-1 text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-sm border ${serverType === 'direct'
+                  ? 'text-primary bg-primary/10 border-primary/20'
+                  : 'text-on-surface-variant bg-surface-container-high border-outline-variant/20'
                   }`}>
-                  <span className={`w-1.5 h-1.5 rounded-full ${isDisconnected
-                      ? 'bg-tertiary animate-pulse'
-                      : 'bg-secondary'
-                    }`}></span>
-                  {isDisconnected ? 'OFFLINE' : 'ONLINE'}
+                  {serverType === 'direct' ? <ArrowDownLeft className="w-2.5 h-2.5" /> : <ArrowUpRight className="w-2.5 h-2.5" />}
+                  {serverType === 'direct' ? 'SVMS' : 'CMS FORWARDED'}
                 </span>
               </InfoTooltip>
-              {/* Server Type Badge */}
-              {serverType && (
-                <InfoTooltip content={serverType === 'direct' ? 'Kết nối trực tiếp' : 'Kết nối qua trung gian'}>
-                  <span className={`inline-flex items-center gap-1 text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-sm border ${serverType === 'direct'
-                      ? 'text-primary bg-primary/10 border-primary/20'
-                      : 'text-on-surface-variant bg-surface-container-high border-outline-variant/20'
-                    }`}>
-                    {serverType === 'direct' ? <ArrowDownLeft className="w-2.5 h-2.5" /> : <ArrowUpRight className="w-2.5 h-2.5" />}
-                    {serverType === 'direct' ? 'SVMS' : 'CMS FORWARDED'}
-                  </span>
-                </InfoTooltip>
-              )}
-            </div>
-            <div className="flex items-center gap-3 pt-1">
-              <InfoTooltip content="Mã định danh Server (Server ID)">
-                <span className="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest">{srv.id || srv.serial}</span>
-              </InfoTooltip>
-              <span className="w-1 h-1 rounded-full bg-outline-variant/30"></span>
-              <InfoTooltip content="Địa chỉ IP gốc của Server">
-                <span className="text-[10px] font-mono font-medium text-on-surface-variant">IP: {srv.svms_ipv4_ip || srv.server_ip || srv.sender_ip}</span>
-              </InfoTooltip>
-            </div>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-4">

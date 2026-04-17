@@ -67,7 +67,7 @@ function LogFilter({
 
   return (
     <div ref={ref} className="app-log-filter relative">
-      <button onClick={() => console.log(deviceList)}>TEST HERE CLICK ME</button>
+      <button onClick={() => console.log(servers)}>TEST HERE CLICK ME</button>
       <button
         onClick={() => setOpen(v => !v)}
         className={`app-log-filter-btn flex items-center gap-1.5 px-2 py-1 rounded-md transition-all duration-200 group border ${activeCount > 0
