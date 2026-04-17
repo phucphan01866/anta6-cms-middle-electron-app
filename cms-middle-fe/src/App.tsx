@@ -67,6 +67,7 @@ function LogFilter({
 
   return (
     <div ref={ref} className="app-log-filter relative">
+      <button onClick={() => console.log(servers)}>TEST HERE CLICK ME</button>
       <button
         onClick={() => setOpen(v => !v)}
         className={`app-log-filter-btn flex items-center gap-1.5 px-2 py-1 rounded-md transition-all duration-200 group border ${activeCount > 0
@@ -109,7 +110,7 @@ function LogFilter({
                         {checked && <Check className="w-2.5 h-2.5 text-white stroke-[3]" />}
                       </div>
                       <span className="text-[11px] font-semibold text-on-surface truncate">{srv.server_name || id}</span>
-                      <span className="text-[9px] font-mono text-on-surface-variant/50 ml-auto shrink-0">{srv.server_ip} - {srv.id}</span>
+                      <span className="text-[9px] font-mono text-on-surface-variant/50 ml-auto shrink-0">{srv.svms_ipv4_ip || srv.server_ip} - {srv.id}</span>
                     </button>
                   );
                 })}

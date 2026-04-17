@@ -41,6 +41,7 @@ export interface AddExternalServerProps {
 }
 
 export interface ServerData {
+  // og log datas
   id: string;
   serial: string;
   server_ip: string;
@@ -52,6 +53,8 @@ export interface ServerData {
   year: number;
   sender_ip?: string;
   lastSeen?: string;
+  // new datas
+  svms_ipv4_ip?: string;
 }
 
 export interface DeviceItem {

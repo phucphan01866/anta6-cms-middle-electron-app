@@ -57,7 +57,7 @@ const startMonitoring = () => {
 
     const results = [];
     for (const [id, serverData] of servers.entries()) {
-      const ip = serverData.server_ip || serverData.sender_ip;
+      const ip = serverData.svms_ipv4_ip || serverData.server_ip || serverData.sender_ip;
       // Use server_port if available, otherwise fallback to BE default port
       const port = serverData.server_port || defaultPort;
       const name = serverData.server_name || id;

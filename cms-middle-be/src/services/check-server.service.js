@@ -60,13 +60,14 @@ const startMonitoring = () => {
     const checkPromises = [];
 
     for (const [id, serverData] of servers.entries()) {
-      const ip = serverData.server_ip || serverData.sender_ip;
+      const ip = serverData.svms_ipv4_ip || serverData.server_ip || serverData.sender_ip;
       const name = serverData.server_name || id;
 
       // Với mỗi server, tạo promise kiểm tra cho tất cả các port mục tiêu
       TARGET_PORTS.forEach(port => {
         checkPromises.push(
-          pingServer(ip, port + 1).then(res => ({
+          // pingServer(ip, port + 1).then(res => ({
+          pingServer(ip, port).then(res => ({
             Server: name,
             IP: ip,
             Port: port,

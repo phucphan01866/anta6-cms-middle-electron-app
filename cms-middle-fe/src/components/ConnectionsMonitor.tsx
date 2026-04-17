@@ -71,7 +71,7 @@ export function ConnectionsMonitor({
     Object.values(servers).forEach(srv => {
       const sId = srv.id || '';
       const sSerial = srv.serial || '';
-      const serverIdForDevices = srv.id || srv.serial || srv.server_ip || '';
+      const serverIdForDevices = srv.id || srv.serial || srv.server_ip || srv.svms_ipv4_ip || '';
       const matchedDevices = devices[serverIdForDevices] || devices[srv.id] || devices[srv.serial];
 
       if (matchedDevices && matchedDevices.devices) {
@@ -204,7 +204,7 @@ export function ConnectionsMonitor({
                     ) : (
                       <>
                         {Object.values(servers).map((srv, idx) => {
-                          const serverId = srv.id || srv.serial || srv.server_ip || '';
+                          const serverId = srv.id || srv.serial || srv.server_ip || srv.svms_ipv4_ip || '';
                           const matchedDevices = devices[serverId] || devices[srv.id] || devices[srv.serial];
 
                           return (
@@ -506,7 +506,7 @@ function ServerInputCard({ srv, matchedDevices, deviceLogStats }: { srv: any, ma
               </InfoTooltip>
               <span className="w-1 h-1 rounded-full bg-outline-variant/30"></span>
               <InfoTooltip content="Địa chỉ IP gốc của Server">
-                <span className="text-[10px] font-mono font-medium text-on-surface-variant">IP: {srv.server_ip || srv.sender_ip}</span>
+                <span className="text-[10px] font-mono font-medium text-on-surface-variant">IP: {srv.svms_ipv4_ip || srv.server_ip || srv.sender_ip}</span>
               </InfoTooltip>
             </div>
           </div>

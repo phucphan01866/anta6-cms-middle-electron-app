@@ -82,7 +82,7 @@ export function AlertWall({
             : undefined;
           // const camera = undefined;
           const cameraLog = logs.find((log) => log.device_ip === camera?.ip && log.device_name === camera?.name && log.server.server_id === camera?.server_id && log.server.serial === camera?.server_serial)
-          console.log("camera", idx, gridItem, cameraList);
+          // console.log("camera", idx, gridItem, cameraList);
           // console.log("end here")
           // KHU VỰC 3: LOGIC SỰ KIỆN KÉO THẢ (DRAG & DROP) CHO TỪNG Ô COMPONENT
           return (

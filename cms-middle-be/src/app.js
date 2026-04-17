@@ -89,7 +89,7 @@ app.use((req, res, next) => {
     // }
     if (req.originalUrl === '/api/v1/server') {
       // console.log(`[Sender: ${req.ip}:${req.socket.remotePort}]`, req.body);
-      console.log(req.headers)
+      // console.log(req.body)
     }
     // // console.log(req.originalUrl);
     // if (req.originalUrl === '/api/v1/devices') {

@@ -23,5 +23,5 @@ httpServer.listen(port, '0.0.0.0', () => {
   console.log(`📡 CLIENT SOCKET SERVER READY (PORT ${port})\n`);
 
   // Start server monitoring cron job
-  startMonitoring();
+  // startMonitoring();
 });

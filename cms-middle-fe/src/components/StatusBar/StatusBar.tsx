@@ -59,7 +59,7 @@ export function StatusBar({
   const orphanDevices = useMemo(() => {
     const knownKeys = new Set<string>();
     Object.values(servers).forEach(srv => {
-      const serverId = srv.id || srv.serial || srv.server_ip || '';
+      const serverId = srv.id || srv.serial || srv.server_ip || srv.svms_ipv4_ip || '';
       const matchedDevices = devices[serverId] || devices[srv.id] || devices[srv.serial];
       if (matchedDevices && matchedDevices.devices) {
         matchedDevices.devices.forEach((d: any) => {
@@ -90,16 +90,6 @@ export function StatusBar({
     // console.log('Orphan Devices:', orphans);
     return orphans;
   }, [deviceLogStats, servers, devices]);
-
-  // Helper: find server data by connection IP
-  const findServerByIp = (ip: string): ServerData | undefined => {
-    return Object.values(servers).find(s => s.sender_ip === ip || s.server_ip === ip);
-  };
-
-  // Helper: find devices by server id
-  const findDevicesByServerId = (serverId: string): DeviceData | undefined => {
-    return devices[serverId];
-  };
 
   const tabs = [
     { name: 'Current Connection' },
@@ -212,7 +202,7 @@ export function StatusBar({
               {activeTab === 1 && (Object.values(servers).length > 0 || orphanDevices.length > 0) && (
                 <div className="grid gap-3">
                   {Object.values(servers).map((srv, idx) => {
-                    const serverId = srv.id || srv.serial || srv.server_ip || '';
+                    const serverId = srv.id || srv.serial || srv.server_ip || srv.svms_ipv4_ip || '';
                     const matchedDevices = devices[serverId] || devices[srv.id] || devices[srv.serial];
                     const deviceStats = deviceLogStats[serverId] || deviceLogStats[srv.id] || deviceLogStats[srv.serial] || {};
 
@@ -234,7 +224,7 @@ export function StatusBar({
                                 </InfoTooltip>
                                 <span className="w-1 h-1 rounded-full bg-outline-variant/30"></span>
                                 <InfoTooltip content="Địa chỉ IP gốc của Server">
-                                  <span className="text-[9px] font-mono text-on-surface-variant">IP: {srv.server_ip || srv.sender_ip}</span>
+                                  <span className="text-[9px] font-mono text-on-surface-variant">IP: {srv.svms_ipv4_ip || srv.server_ip || srv.sender_ip}</span>
                                 </InfoTooltip>
                                 <span className="w-1 h-1 rounded-full bg-outline-variant/30"></span>
                                 <InfoTooltip content="Phiên bản VMS">

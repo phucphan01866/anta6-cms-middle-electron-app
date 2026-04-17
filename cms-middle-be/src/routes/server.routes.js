@@ -81,10 +81,11 @@ router.post('/api/v1/server', async (req, res) => {
     const serverId = serverData.id || serverData.serial || senderIp;
     servers.set(serverId, {
       ...serverData,
+      svms_ipv4_ip: serverData.svms_ipv4_ip || senderIp,
       sender_ip: senderIp,
       lastSeen: new Date().toISOString()
     });
-    console.log(`[SERVER_INFO] Saved server from ${senderIp}: ${serverData.server_name || serverId}`);
+    // console.log(`[SERVER_INFO] Saved server from ${senderIp}: ${serverData.server_name || serverId}`);
   }
 
   // Emit toàn bộ servers hiện tại tới FE một lần thay vì nhiều lần
@@ -102,8 +103,10 @@ router.post('/api/v1/server', async (req, res) => {
     }
   }
   // Forward tới tất cả target server có mode 'send'
-  forwardToSendTargets('/api/v1/server', req.body);
-
+  forwardToSendTargets('/api/v1/server', {
+    ...req.body,
+    svms_ipv4_ip: req.body.svms_ipv4_ip || senderIp,
+  });
   return res.status(200).send({ success: true, count: dataArr.length });
 });
 
@@ -146,9 +149,7 @@ router.post('/api/v1/devices', async (req, res) => {
       console.error(`[DEVICES_FORWARD_FAIL] ${err.message}`);
     }
   }
-  // Forward tới tất cả target server có mode 'send'
   forwardToSendTargets('/api/v1/devices', req.body);
-
   return res.status(200).send({ success: true, count: dataArr.length });
 });
 

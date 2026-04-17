@@ -37,7 +37,7 @@ function getLocalIP() {
   return preferred?.address || '127.0.0.1';
 }
 
-console.log(`[Electron] Local IP: ${getLocalIP()}`);
+// console.log(`[Electron] Local IP: ${getLocalIP()}`);
 
 // In dev mode, we assume the backend is started via concurrently or separately.
 // For production mode, we might want to start the backend directly here.
