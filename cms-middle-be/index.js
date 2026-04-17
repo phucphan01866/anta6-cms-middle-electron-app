@@ -3,11 +3,12 @@ require('dotenv').config(); // Load biến môi trường của BE (cms-middle-b
 require('dotenv').config({ path: path.join(__dirname, '../.env.generated') }); // Đè các thông số IP/Port chung từ root
 
 const { createServer } = require('http');
-const { port } = require('./src/config');
+const { port, SVMS_PORT_LIST, CONNECTIVITY_TIMEOUT_MS } = require('./src/config');
 const app = require('./src/app');
 const socketState = require('./src/socketState');
 const setupSocketEvents = require('./src/socketEvents');
 const { startMonitoring } = require('./src/services/check-server.service');
+const connectivityMonitor = require('./src/services/connectivity-monitor.service');
 
 const httpServer = createServer(app);
 
@@ -20,8 +21,14 @@ setupSocketEvents();
 // ─── SERVER STARTUP ──────────────────────────────────────────────────────────
 httpServer.listen(port, '0.0.0.0', () => {
   console.log(`\n🚀 MIDDLE SERVER RUNNING AT: http://0.0.0.0:${port}`);
-  console.log(`📡 CLIENT SOCKET SERVER READY (PORT ${port})\n`);
+  console.log(`📡 CLIENT SOCKET SERVER READY (PORT ${port})`);
 
   // Start server monitoring cron job
-  // startMonitoring();
+  startMonitoring();
+
+  // Log connectivity monitor config
+  console.log(`\n🔌 CONNECTIVITY MONITOR INITIALIZED`);
+  console.log(`   ├─ Timeout: ${CONNECTIVITY_TIMEOUT_MS}ms`);
+  console.log(`   ├─ SVMS Ports: ${SVMS_PORT_LIST.join(', ')}`);
+  console.log(`   └─ Timers: ${JSON.stringify(connectivityMonitor.getTimerStats())}\n`);
 });

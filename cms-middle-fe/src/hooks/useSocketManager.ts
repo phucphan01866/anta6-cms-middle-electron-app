@@ -307,7 +307,38 @@ export function useSocketManager() {
       }
     };
 
-    // Remove unused onUpdateSendServers
+    // ─── Connectivity Monitor Events ──────────────────────────────────────────
+    const onServerConnectionStatus = (raw: { serverId: string; connectionStatus: string; serverName?: string; type?: string }) => {
+      console.log('[SOCKET] server-connection-status:', raw);
+      setServers(prev => {
+        const existing = prev[raw.serverId];
+        if (!existing) return prev;
+        return {
+          ...prev,
+          [raw.serverId]: {
+            ...existing,
+            connectionStatus: raw.connectionStatus as 'connected' | 'disconnected',
+          }
+        };
+      });
+    };
+
+    const onDeviceConnectionStatus = (raw: { serverId: string; deviceIndex: number; connectionStatus: string }) => {
+      console.log('[SOCKET] device-connection-status:', raw);
+      setDevices(prev => {
+        const existing = prev[raw.serverId];
+        if (!existing) return prev;
+        const updatedDevices = existing.devices.map(d =>
+          String(d.index) === String(raw.deviceIndex)
+            ? { ...d, connectionStatus: raw.connectionStatus as 'connected' | 'disconnected' }
+            : d
+        );
+        return {
+          ...prev,
+          [raw.serverId]: { ...existing, devices: updatedDevices }
+        };
+      });
+    };
 
     socket.on('external-server-connecting', onConnectingExternalServer);
     socket.on('external-server-connect', onConnectedExternalServer);
@@ -320,6 +351,8 @@ export function useSocketManager() {
     socket.on('receive-server-information', onReceiveServerInformation);
     socket.on('receive-devices-information', onReceiveDevicesInformation);
     socket.on('update-connections', onUpdateConnections);
+    socket.on('server-connection-status', onServerConnectionStatus);
+    socket.on('device-connection-status', onDeviceConnectionStatus);
     socket.on('test', (data) => {
       // console.log('test data', data)
       alert('we got new url: ' + data);
@@ -336,6 +369,8 @@ export function useSocketManager() {
       socket.off('receive-server-information', onReceiveServerInformation);
       socket.off('receive-devices-information', onReceiveDevicesInformation);
       socket.off('update-connections', onUpdateConnections);
+      socket.off('server-connection-status', onServerConnectionStatus);
+      socket.off('device-connection-status', onDeviceConnectionStatus);
       socket.off('test', (data) => {
         console.log('test data', data)
       })

@@ -55,6 +55,10 @@ export interface ServerData {
   lastSeen?: string;
   // new datas
   svms_ipv4_ip?: string;
+  // connectivity monitor fields
+  type?: 'direct' | 'forwarded';
+  connectionStatus?: 'connected' | 'disconnected';
+  lastLogReceived?: string;
 }
 
 export interface DeviceItem {
@@ -62,6 +66,11 @@ export interface DeviceItem {
   ip: string;
   type: string;
   index: number;
+  // connectivity monitor fields
+  device_ip?: string;
+  device_port?: number;
+  connectionStatus?: 'connected' | 'disconnected';
+  lastLogReceived?: string;
 }
 
 export interface DeviceData {

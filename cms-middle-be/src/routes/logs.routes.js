@@ -1,8 +1,9 @@
 const express = require('express');
 const axios = require('axios');
-const { getClientSockets, connections } = require('../socketState');
+const { getClientSockets, connections, servers, devices } = require('../socketState');
 const { notifyStatusToClients } = require('../helpers/notify');
 const authMiddleware = require('../middleware/auth.middleware');
+const connectivityMonitor = require('../services/connectivity-monitor.service');
 
 const router = express.Router();
 
@@ -17,7 +18,10 @@ async function forwardWithRetry(conn, logData) {
 
   const sendRequest = (token) => {
     return axios.post(`${conn.url}/api/v1/logs`, logData, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'x-sync-forwarded': 'true'
+      },
       timeout: 5000
     });
   };
@@ -73,6 +77,43 @@ router.post('/api/v1/logs', async (req, res) => {
     ip: req.ip,
     body: req.body,
   };
+
+  // ─── CONNECTIVITY: AUTO-RECONNECT & TIMER RESET ────────────────────────────
+  const logBody = req.body || {};
+  const serverId = logBody.server_id || logBody.server?.server_id;
+  const deviceIndex = logBody.device_index;
+
+  if (serverId) {
+    const now = new Date().toISOString();
+
+    // Auto-reconnect server nếu đang disconnected
+    const serverEntry = servers.get(serverId);
+    if (serverEntry && serverEntry.connectionStatus === 'disconnected') {
+      console.log(`[CONNECTIVITY] ✅ Server ${serverId} auto-reconnected (log received)`);
+      serverEntry.connectionStatus = 'connected';
+      serverEntry.lastLogReceived = now;
+    } else if (serverEntry) {
+      serverEntry.lastLogReceived = now;
+    }
+
+    // Auto-reconnect device nếu đang disconnected
+    if (deviceIndex != null) {
+      const deviceEntry = devices.get(serverId);
+      if (deviceEntry) {
+        const device = deviceEntry.devices.find(d => String(d.index) === String(deviceIndex));
+        if (device) {
+          if (device.connectionStatus === 'disconnected') {
+            console.log(`[CONNECTIVITY] ✅ Device ${serverId}::${deviceIndex} auto-reconnected (log received)`);
+            device.connectionStatus = 'connected';
+          }
+          device.lastLogReceived = now;
+        }
+      }
+    }
+
+    // Reset 30s timer
+    connectivityMonitor.onLogReceived(serverId, deviceIndex);
+  }
 
   // 1. Phát dữ liệu cho các Client của mình (Frontend) qua Socket.IO
   clientSockets.emit('receive-log', logData);

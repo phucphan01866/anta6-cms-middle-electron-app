@@ -1,10 +1,10 @@
 const net = require('net');
 const cron = require('node-cron');
 const { servers } = require('../socketState');
-const { port: defaultPort } = require('../config');
+const { port: defaultPort, SVMS_PORT_LIST } = require('../config');
 
-// Danh sách các cổng cần kiểm tra theo yêu cầu
-const TARGET_PORTS = [17221, 17222, 7500, 48021];
+// Sử dụng SVMS_PORT_LIST từ config (đọc từ .env hoặc fallback)
+const TARGET_PORTS = SVMS_PORT_LIST;
 
 /**
  * Pings a server using TCP connection

@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import type { LogData, SystemConnection, SystemConfig, ServerData, DeviceData } from '../types';
-import { Plus, Inbox, Activity, Terminal, Cpu, Globe, Send, Wifi, WifiOff, Loader2, ChevronDown, RefreshCw, Trash2, Settings } from 'lucide-react';
+import { Plus, Inbox, Activity, Terminal, Cpu, Globe, Send, Wifi, WifiOff, Loader2, ChevronDown, RefreshCw, Trash2, Settings, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 import { AddExternalServer } from './AddExternalServer';
 import { ConfigSystem } from './ConfigSystem';
 import apiClient from '../api/apiClient';
@@ -180,13 +180,27 @@ export function ConnectionsMonitor({
                   <div className="flex items-center gap-4 pr-3 border-r border-outline-variant/20">
                     <div className="flex flex-col items-end gap-0.5">
                       <span className="text-[8px] font-bold text-on-surface-variant/70 uppercase tracking-widest">SERVERS</span>
-                      <span className="text-[14px] font-black font-mono text-on-surface leading-none">{Object.keys(servers).length}</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[14px] font-black font-mono text-on-surface leading-none">{Object.keys(servers).length}</span>
+                        {Object.values(servers).some(s => s.connectionStatus === 'disconnected') && (
+                          <span className="text-[8px] font-black font-mono text-tertiary bg-tertiary/10 px-1 rounded">
+                            {Object.values(servers).filter(s => s.connectionStatus === 'disconnected').length} off
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <div className="flex flex-col items-end gap-0.5">
                       <span className="text-[8px] font-bold text-on-surface-variant/70 uppercase tracking-widest">DEVICES</span>
-                      <span onClick={() => console.log(devices, orphanDevices)} className="text-[14px] font-black font-mono text-on-surface leading-none">
-                        {Object.values(devices).reduce((acc, curr) => acc + (curr.devices?.length || 0), 0) + (orphanDevices?.length || 0)}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span onClick={() => console.log(devices, orphanDevices)} className="text-[14px] font-black font-mono text-on-surface leading-none">
+                          {Object.values(devices).reduce((acc, curr) => acc + (curr.devices?.length || 0), 0) + (orphanDevices?.length || 0)}
+                        </span>
+                        {Object.values(devices).some(dd => dd.devices?.some(d => d.connectionStatus === 'disconnected')) && (
+                          <span className="text-[8px] font-black font-mono text-tertiary bg-tertiary/10 px-1 rounded">
+                            {Object.values(devices).reduce((acc, dd) => acc + (dd.devices?.filter(d => d.connectionStatus === 'disconnected').length || 0), 0)} off
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <ChevronDown className={`w-5 h-5 text-on-surface-variant transition-transform duration-300 ${isInputExpanded ? 'rotate-180' : ''}`} />
@@ -326,23 +340,44 @@ function DeviceItemRow({
   ip,
   type,
   logCount,
-  isOrphan = false
+  isOrphan = false,
+  connectionStatus
 }: {
   name: string;
   ip: string;
   type?: string;
   logCount: number;
   isOrphan?: boolean;
+  connectionStatus?: 'connected' | 'disconnected';
 }) {
+  const isConnected = connectionStatus === 'connected';
+  const isDisconnected = connectionStatus === 'disconnected';
+
   return (
-    <div className="device-item-row flex items-center gap-4 px-3 py-2 bg-surface-container-lowest/40 rounded border border-outline-variant/5 hover:border-outline-variant/20 transition-colors">
+    <div className={`device-item-row flex items-center gap-4 px-3 py-2 bg-surface-container-lowest/40 rounded border transition-colors ${
+      isDisconnected
+        ? 'border-tertiary/20 bg-tertiary/5'
+        : 'border-outline-variant/5 hover:border-outline-variant/20'
+    }`}>
+      {/* Connection status dot */}
+      {connectionStatus && (
+        <InfoTooltip content={isConnected ? 'Đang kết nối' : 'Mất kết nối'} side="bottom">
+          <div className={`w-2 h-2 rounded-full shrink-0 ring-2 ${
+            isConnected
+              ? 'bg-secondary ring-secondary/20'
+              : 'bg-tertiary ring-tertiary/20 animate-pulse'
+          }`}></div>
+        </InfoTooltip>
+      )}
       <InfoTooltip content="Phân loại thiết bị" side="bottom">
         <span className={`text-[9.5px] font-mono font-medium min-w-[70px] text-center px-1.5 py-0.5 rounded shadow-sm ${isOrphan ? "text-tertiary bg-tertiary/10 border border-tertiary/20" : "text-secondary bg-secondary/10 border border-secondary/20"}`}>
           {isOrphan ? "UNKNOWN" : (type ? type.toUpperCase() : "UNKNOWN")}
         </span>
       </InfoTooltip>
       <InfoTooltip content="Tên Thiết bị" side="bottom">
-        <span className="text-[11px] font-bold text-on-surface-variant tracking-wide flex-1 truncate max-w-[200px] block">{name}</span>
+        <span className={`text-[11px] font-bold tracking-wide flex-1 truncate max-w-[200px] block ${
+          isDisconnected ? 'text-on-surface-variant/50' : 'text-on-surface-variant'
+        }`}>{name}</span>
       </InfoTooltip>
       <div className="flex w-full items-center justify-between gap-4">
         <InfoTooltip content="IP Thiết bị" side="bottom">
@@ -485,21 +520,65 @@ function SendTargetCard({ conn }: { conn: SystemConnection }) {
 function ServerInputCard({ srv, matchedDevices, deviceLogStats }: { srv: any, matchedDevices: any, deviceLogStats: Record<string, any> }) {
   const [isExpanded, setIsExpanded] = useState(false);
 
+  const connStatus = srv.connectionStatus || 'connected';
+  const isDisconnected = connStatus === 'disconnected';
+  const serverType = srv.type; // 'direct' | 'forwarded' | undefined
+
+  // Count connected / disconnected devices
+  const deviceCount = matchedDevices?.devices?.length || 0;
+  const disconnectedDeviceCount = matchedDevices?.devices?.filter((d: any) => d.connectionStatus === 'disconnected').length || 0;
+
+  const borderColor = isDisconnected ? 'border-l-tertiary/60' : 'border-l-secondary/60';
+  const iconBg = isDisconnected ? 'bg-tertiary/10' : 'bg-secondary/10';
+  const iconColor = isDisconnected ? 'text-tertiary' : 'text-secondary';
+
   return (
-    <div className="server-item-card bg-surface-container border border-outline-variant/10 px-4 py-3 rounded-md border-l-[3px] border-l-secondary/60 shadow-sm transition-all hover:bg-surface-container-high/40 group ">
+    <div className={`server-item-card bg-surface-container border border-outline-variant/10 px-4 py-3 rounded-md border-l-[3px] ${borderColor} shadow-sm transition-all hover:bg-surface-container-high/40 group`}>
       {/* Server Header */}
       <div
         className="flex items-center justify-between border-b border-outline-variant/5 cursor-pointer select-none"
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="flex items-start gap-3">
-          <div className="p-2 bg-secondary/10 rounded-lg shrink-0">
-            <Cpu className="w-4 h-4 text-secondary" />
+          <div className={`p-2 ${iconBg} rounded-lg shrink-0 relative`}>
+            <Cpu className={`w-4 h-4 ${iconColor}`} />
           </div>
           <div className="flex flex-col gap-0.5">
-            <InfoTooltip content="Tên Server">
-              <span className="text-[14px] font-black text-on-surface tracking-wide leading-none group-hover:text-primary transition-colors">{srv.server_name || srv.id}</span>
-            </InfoTooltip>
+            <div className="flex items-center gap-2">
+              <InfoTooltip content="Tên Server">
+                <span className={`text-[14px] font-black tracking-wide leading-none group-hover:text-primary transition-colors ${
+                  isDisconnected ? 'text-on-surface/60' : 'text-on-surface'
+                }`}>{srv.server_name || srv.id}</span>
+              </InfoTooltip>
+              {/* Connection Status Badge */}
+              <InfoTooltip content={isDisconnected ? 'Server mất kết nối' : 'Server đang hoạt động'}>
+                <span className={`inline-flex items-center gap-1 text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-sm border ${
+                  isDisconnected
+                    ? 'text-tertiary bg-tertiary/10 border-tertiary/20'
+                    : 'text-secondary bg-secondary/10 border-secondary/20'
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${
+                    isDisconnected
+                      ? 'bg-tertiary animate-pulse'
+                      : 'bg-secondary'
+                  }`}></span>
+                  {isDisconnected ? 'OFFLINE' : 'ONLINE'}
+                </span>
+              </InfoTooltip>
+              {/* Server Type Badge */}
+              {serverType && (
+                <InfoTooltip content={serverType === 'direct' ? 'Kết nối trực tiếp' : 'Kết nối qua trung gian'}>
+                  <span className={`inline-flex items-center gap-1 text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-sm border ${
+                    serverType === 'direct'
+                      ? 'text-primary bg-primary/10 border-primary/20'
+                      : 'text-on-surface-variant bg-surface-container-high border-outline-variant/20'
+                  }`}>
+                    {serverType === 'direct' ? <ArrowDownLeft className="w-2.5 h-2.5" /> : <ArrowUpRight className="w-2.5 h-2.5" />}
+                    {serverType}
+                  </span>
+                </InfoTooltip>
+              )}
+            </div>
             <div className="flex items-center gap-3 pt-1">
               <InfoTooltip content="Mã định danh Server (Server ID)">
                 <span className="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest">{srv.id || srv.serial}</span>
@@ -513,8 +592,17 @@ function ServerInputCard({ srv, matchedDevices, deviceLogStats }: { srv: any, ma
         </div>
         <div className="flex items-center gap-4">
           <div className="flex flex-col items-end gap-1 px-3 py-1 bg-surface-container/50 rounded border border-outline-variant/10">
-            <span className="text-[8px] font-bold text-on-surface-variant uppercase tracking-widest">DEVICES ASSIGNED</span>
-            <span className="text-[14px] font-black font-mono text-on-surface leading-none">{matchedDevices?.devices?.length || 0}</span>
+            <span className="text-[8px] font-bold text-on-surface-variant uppercase tracking-widest">DEVICES</span>
+            <div className="flex items-center gap-1">
+              <span className="text-[14px] font-black font-mono text-on-surface leading-none">{deviceCount}</span>
+              {disconnectedDeviceCount > 0 && (
+                <InfoTooltip content={`${disconnectedDeviceCount} thiết bị mất kết nối`}>
+                  <span className="text-[9px] font-black font-mono text-tertiary bg-tertiary/10 px-1 rounded">
+                    {disconnectedDeviceCount} offline
+                  </span>
+                </InfoTooltip>
+              )}
+            </div>
           </div>
           <ChevronDown className={`w-4 h-4 text-on-surface-variant transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
         </div>
@@ -541,6 +629,7 @@ function ServerInputCard({ srv, matchedDevices, deviceLogStats }: { srv: any, ma
                     ip={device.ip}
                     type={device.type}
                     logCount={logCount}
+                    connectionStatus={device.connectionStatus}
                   />
                 );
               })}

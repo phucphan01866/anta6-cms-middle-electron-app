@@ -4,6 +4,7 @@ const { getClientSockets, servers, devices, connections } = require('../socketSt
 const { getCMSBackendURL } = require('../config');
 const { notifyStatusToClients } = require('../helpers/notify');
 const authMiddleware = require('../middleware/auth.middleware');
+const connectivityMonitor = require('../services/connectivity-monitor.service');
 
 
 const router = express.Router();
@@ -12,7 +13,7 @@ const router = express.Router();
  * Hàm forward dữ liệu (server/devices) tới tất cả target server có mode 'send'.
  * Có retry logic khi gặp lỗi 401 (giống forwardWithRetry trong logs.routes).
  */
-async function forwardToSendTargets(endpoint, data) {
+async function forwardToSendTargets(endpoint, data, extraHeaders = {}) {
   const adminEmail = process.env.ADMIN_EMAIL || 'admin@cms.com';
   const adminPass = process.env.ADMIN_PASSWORD || 'admin1234';
   const sendTargets = connections.filter(c => c.mode === 'send');
@@ -20,7 +21,11 @@ async function forwardToSendTargets(endpoint, data) {
   for (const conn of sendTargets) {
     const sendRequest = (token) =>
       axios.post(`${conn.url}${endpoint}`, data, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'x-sync-forwarded': 'true',
+          ...extraHeaders
+        },
         timeout: 5000
       });
 
@@ -76,16 +81,29 @@ router.post('/api/v1/server', async (req, res) => {
   const senderIp = (req.ip || '').replace('::ffff:', '');
   const dataArr = Array.isArray(req.body) ? req.body : [req.body];
 
+  // TODO: BOOKMARK — logic phân biệt direct/forwarded, có thể sửa sau
+  const isForwarded = req.headers['x-sync-forwarded'] === 'true';
+  const serverType = isForwarded ? 'forwarded' : 'direct';
+
   for (const serverData of dataArr) {
     if (!serverData) continue;
     const serverId = serverData.id || serverData.serial || senderIp;
+    const existing = servers.get(serverId);
+
     servers.set(serverId, {
       ...serverData,
       svms_ipv4_ip: serverData.svms_ipv4_ip || senderIp,
       sender_ip: senderIp,
-      lastSeen: new Date().toISOString()
+      lastSeen: new Date().toISOString(),
+      // Trường mới: type, connectionStatus, lastLogReceived
+      type: serverData.type || (existing?.type) || serverType,
+      connectionStatus: serverData.connectionStatus || (existing?.connectionStatus) || 'connected',
+      lastLogReceived: serverData.lastLogReceived || (existing?.lastLogReceived) || new Date().toISOString(),
     });
-    // console.log(`[SERVER_INFO] Saved server from ${senderIp}: ${serverData.server_name || serverId}`);
+
+    // Đăng ký vào connectivity monitor
+    connectivityMonitor.registerServer(serverId);
+    // console.log(`[SERVER_INFO] Saved server from ${senderIp}: ${serverData.server_name || serverId} (type: ${serverType})`);
   }
 
   // Emit toàn bộ servers hiện tại tới FE một lần thay vì nhiều lần
@@ -126,13 +144,31 @@ router.post('/api/v1/devices', async (req, res) => {
     const { server, devices: deviceList } = item;
     const serverId = server?.server_id || server?.serial || senderIp;
 
+    // Tách ip:port từ device.ip field (SVMS gửi dạng "192.168.1.202:2000")
+    const parsedDevices = (deviceList || []).map(d => {
+      // Nếu đã có device_ip (từ CMS khác forward), giữ nguyên
+      if (d.device_ip) return { ...d, connectionStatus: d.connectionStatus || 'connected', lastLogReceived: d.lastLogReceived || new Date().toISOString() };
+
+      const [deviceIp, devicePortStr] = (d.ip || '').split(':');
+      return {
+        ...d,
+        device_ip: deviceIp || '',
+        device_port: devicePortStr ? parseInt(devicePortStr, 10) : null,
+        connectionStatus: d.connectionStatus || 'connected',
+        lastLogReceived: d.lastLogReceived || new Date().toISOString(),
+      };
+    });
+
     devices.set(serverId, {
       server,
-      devices: deviceList || [],
+      devices: parsedDevices,
       sender_ip: senderIp,
       lastSeen: new Date().toISOString()
     });
-    // console.log(`[DEVICES_INFO] Saved ${(deviceList || []).length} devices for ${serverId}`);
+
+    // Đăng ký devices vào connectivity monitor (chỉ cho direct servers)
+    connectivityMonitor.registerDevices(serverId, parsedDevices);
+    // console.log(`[DEVICES_INFO] Saved ${parsedDevices.length} devices for ${serverId}`);
   }
 
   // Emit toàn bộ devices hiện tại tới FE một lần
@@ -189,4 +225,4 @@ async function syncDataToTarget(url, accessToken) {
   }
 }
 
-module.exports = { router, syncDataToTarget };
+module.exports = { router, syncDataToTarget, forwardToSendTargets };

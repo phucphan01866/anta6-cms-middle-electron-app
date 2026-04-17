@@ -9,13 +9,22 @@ const connections = [];
 
 /**
  * In-memory store for SVMS server info, keyed by server id.
- * Structure: Map<string, { id, serial, server_ip, server_name, version, location, day, month, year, lastSeen }>
+ * Structure: Map<string, { id, serial, server_ip, server_name, version, location,
+ *   day, month, year, lastSeen,
+ *   type: 'direct' | 'forwarded',
+ *   connectionStatus: 'connected' | 'disconnected',
+ *   lastLogReceived: ISO string }>
  */
 const servers = new Map();
 
 /**
  * In-memory store for devices per server, keyed by server_id.
- * Structure: Map<string, { server: { serial, server_id }, devices: [{ name, ip, type, index }] }>
+ * Structure: Map<string, { server: { serial, server_id }, devices: [{
+ *   name, ip, type, index,
+ *   device_ip: string, device_port: number,
+ *   connectionStatus: 'connected' | 'disconnected',
+ *   lastLogReceived: ISO string }],
+ *   sender_ip, lastSeen }>
  */
 const devices = new Map();
 
