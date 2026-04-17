@@ -94,6 +94,7 @@ const removeConnection = (url) => {
 
   console.log(`[REMOVE] Removed connection: ${url} (mode: ${mode})`);
   notifyStatusToClients(url, mode, 'disconnected');
+  syncConnectionsToFrontend();
 
   return { success: true, message: `Removed ${url}` };
 };

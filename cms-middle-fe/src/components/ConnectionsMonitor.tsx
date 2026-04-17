@@ -394,10 +394,17 @@ function SendTargetCard({ conn }: { conn: SystemConnection }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const status = conn.status || 'connecting';
 
-  const handleRemoveConnection = () => {
+  const handleRemoveConnection = async () => {
     console.log('[DEBUG] remove-connection for:', conn.ip);
     setIsMenuOpen(false);
-    // TODO: Implement actual removal logic
+    try {
+      await apiClient.post('/api/v1/remove-connection', {
+        ip: conn.ip,
+        port: conn.port,
+      });
+    } catch (e) {
+      console.error('[DEBUG] Failed to remove connection', e);
+    }
   };
 
   const handleReconnect = async () => {

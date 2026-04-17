@@ -91,20 +91,26 @@ router.post('/api/v1/server', async (req, res) => {
     const serverId = serverData.id || serverData.serial || senderIp;
     const existing = servers.get(serverId);
 
+    // Auto-reconnect: nếu server đã tồn tại và đang disconnected → connected
+    const wasDisconnected = existing?.connectionStatus === 'disconnected';
+
     servers.set(serverId, {
       ...serverData,
       svms_ipv4_ip: serverData.svms_ipv4_ip || senderIp,
       sender_ip: senderIp,
       lastSeen: new Date().toISOString(),
-      // Trường mới: type, connectionStatus, lastLogReceived
       type: serverData.type || (existing?.type) || serverType,
-      connectionStatus: serverData.connectionStatus || (existing?.connectionStatus) || 'connected',
+      connectionStatus: 'connected', // Nhận được data → luôn connected
       lastLogReceived: serverData.lastLogReceived || (existing?.lastLogReceived) || new Date().toISOString(),
     });
 
+    if (wasDisconnected) {
+      console.log(`[CONNECTIVITY] ✅ Server ${serverId} auto-reconnected (server data received)`);
+      clientSockets.emit('server-connection-status', { serverId, status: 'connected' });
+    }
+
     // Đăng ký vào connectivity monitor
     connectivityMonitor.registerServer(serverId);
-    // console.log(`[SERVER_INFO] Saved server from ${senderIp}: ${serverData.server_name || serverId} (type: ${serverType})`);
   }
 
   // Emit toàn bộ servers hiện tại tới FE một lần thay vì nhiều lần
@@ -144,21 +150,41 @@ router.post('/api/v1/devices', async (req, res) => {
     if (!item) continue;
     const { server, devices: deviceList } = item;
     const serverId = server?.server_id || server?.serial || senderIp;
+    const existingEntry = devices.get(serverId);
 
     // Tách ip:port từ device.ip field (SVMS gửi dạng "192.168.1.202:2000")
     const parsedDevices = (deviceList || []).map(d => {
       // Nếu đã có device_ip (từ CMS khác forward), giữ nguyên
-      if (d.device_ip) return { ...d, connectionStatus: d.connectionStatus || 'connected', lastLogReceived: d.lastLogReceived || new Date().toISOString() };
+      if (d.device_ip) return { ...d, connectionStatus: 'connected', lastLogReceived: d.lastLogReceived || new Date().toISOString() };
 
       const [deviceIp, devicePortStr] = (d.ip || '').split(':');
       return {
         ...d,
         device_ip: deviceIp || '',
         device_port: devicePortStr ? parseInt(devicePortStr, 10) : null,
-        connectionStatus: d.connectionStatus || 'connected',
+        connectionStatus: 'connected', // Nhận được data → luôn connected
         lastLogReceived: d.lastLogReceived || new Date().toISOString(),
       };
     });
+
+    // Auto-reconnect: nếu có device nào đang disconnected → emit connected
+    if (existingEntry) {
+      for (const newD of parsedDevices) {
+        const oldD = existingEntry.devices.find(od => String(od.index) === String(newD.index));
+        if (oldD && oldD.connectionStatus === 'disconnected') {
+          console.log(`[CONNECTIVITY] ✅ Device ${serverId}::${newD.index} auto-reconnected (device data received)`);
+          clientSockets.emit('device-connection-status', { serverId, deviceIndex: newD.index, status: 'connected' });
+        }
+      }
+    }
+
+    // Auto-reconnect server nếu đang disconnected
+    const serverEntry = servers.get(serverId);
+    if (serverEntry && serverEntry.connectionStatus === 'disconnected') {
+      console.log(`[CONNECTIVITY] ✅ Server ${serverId} auto-reconnected (device data received)`);
+      serverEntry.connectionStatus = 'connected';
+      clientSockets.emit('server-connection-status', { serverId, status: 'connected' });
+    }
 
     devices.set(serverId, {
       server,
@@ -169,7 +195,6 @@ router.post('/api/v1/devices', async (req, res) => {
 
     // Đăng ký devices vào connectivity monitor (chỉ cho direct servers)
     connectivityMonitor.registerDevices(serverId, parsedDevices);
-    // console.log(`[DEVICES_INFO] Saved ${parsedDevices.length} devices for ${serverId}`);
   }
 
   // Emit toàn bộ devices hiện tại tới FE một lần
