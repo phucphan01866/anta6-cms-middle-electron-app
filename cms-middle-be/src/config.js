@@ -25,4 +25,4 @@ const declaredRoutes = [
   '/api/v1/devices',
 ];
 
-module.exports = { port, getURL, getCMSBackendURL, declaredRoutes, SVMS_PORT_LIST, CONNECTIVITY_TIMEOUT_MS };
+module.exports = { port, getCMSBackendURL, declaredRoutes, SVMS_PORT_LIST, CONNECTIVITY_TIMEOUT_MS };

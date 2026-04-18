@@ -3,7 +3,7 @@ import axios from 'axios';
 const getBeHost = () => localStorage.getItem('BE_HOST') || import.meta.env.VITE_BE_HOST || 'localhost';
 const getBePort = () => localStorage.getItem('BE_PORT') || import.meta.env.VITE_BE_PORT || '5050';
 
-export const getBeUrl = () => `http://${getBeHost()}:${getBePort()}`;
+const getBeUrl = () => `http://${getBeHost()}:${getBePort()}`;
 
 const apiClient = axios.create({
   baseURL: getBeUrl(),
