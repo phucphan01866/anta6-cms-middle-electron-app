@@ -350,7 +350,7 @@ function Dashboard() {
               <div className="app-logs-container flex-1 overflow-y-auto custom-scrollbar p-0 bg-surface-container-low/10">
                 {filteredLogs.length > 0 ? (
                   <div className="flex flex-col">
-                    {filteredLogs.map((log, idx) => (
+                    {filteredLogs.slice(0, 75).map((log, idx) => (
                       <div key={log.id || idx} className="border-b border-outline-variant/5">
                         <LogEntry log={log} onClick={() => setSelectedLog(log)} />
                       </div>

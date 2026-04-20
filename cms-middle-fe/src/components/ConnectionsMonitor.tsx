@@ -209,7 +209,7 @@ export function ConnectionsMonitor({
 
               <div className={`grid transition-all duration-300 ease-in-out ${isInputExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
                 <div className={`min-h-0 ${isInputExpanded ? 'overflow-visible' : 'overflow-hidden'}`}>
-                  <div className="flex-1 custom-scrollbar grid gap-4 content-start px-4 pb-5">
+                  <div className="flex-1 custom-scrollbar grid gap-4 content-start px-4 mt-2 mb-5">
                     {Object.keys(servers).length === 0 && orphanDevices.length === 0 ? (
                       <div className="py-12 flex flex-col items-center justify-center opacity-40 gap-3 border border-dashed border-outline-variant/20 rounded-md bg-surface-container-lowest/50">
                         <Inbox className="w-8 h-8 text-on-surface-variant" />
