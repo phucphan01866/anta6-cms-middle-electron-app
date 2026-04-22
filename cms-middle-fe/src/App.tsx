@@ -72,7 +72,7 @@ function LogFilter({
   const activeCount = selectedServers.size + selectedDevices.size + (selectedEventType ? 1 : 0);
 
   return (
-    <div ref={ref} className="app-log-filter relative">
+    <div ref={ref} className="app-log-filter flex items-center p-1 cursor-pointer transition-all duration-200 group">
       {/* <button className='absolute bottom-3 right-3' onClick={() => console.log(deviceList)}>TEST HERE CLICK ME</button> */}
       <button
         onClick={() => setOpen(v => !v)}
@@ -89,8 +89,7 @@ function LogFilter({
         )}
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-2 z-50 bg-surface-container-high border border-outline-variant/90 shadow-2xl rounded-lg w-64 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-
+        <div className="absolute right-3 top-[95%] z-50 bg-surface-container-high border border-outline-variant/90 shadow-2xl rounded-lg w-[90%] max-w-64 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
           {/* Servers */}
           <div className="px-3 pt-3 pb-1">
             <div className="flex items-center gap-1.5 mb-2">
@@ -114,8 +113,8 @@ function LogFilter({
                         }`}>
                         {checked && <Check className="w-2.5 h-2.5 text-white stroke-[3]" />}
                       </div>
-                      <span className="text-[11px] font-semibold text-on-surface truncate">{srv.server_name || id}</span>
-                      <span className="text-[9px] font-mono text-on-surface-variant/50 ml-auto shrink-0">{srv.svms_ipv4_ip || srv.server_ip} - {srv.id}</span>
+                      <span className="text-[11px] font-semibold text-on-surface shrink-0">{srv.server_name || id}</span>
+                      <span className="text-[9px] font-mono text-on-surface-variant/50 ml-auto truncate">{srv.svms_ipv4_ip || srv.server_ip} - {srv.id}</span>
                     </button>
                   );
                 })}
@@ -230,6 +229,7 @@ function Dashboard() {
   const [selectedDevices, setSelectedDevices] = useState<Set<string>>(new Set());
   const [rightTab, setRightTab] = useState<'logs' | 'devices'>('logs');
   const [mainTab, setMainTab] = useState<'alert' | 'connections'>('alert');
+  const [visibleAlerts, setVisibleAlerts] = useState<number>(30);
   const [gridCols, setGridCols] = useState<number>(3);
   const [rightPanelVisible, setRightPanelVisible] = useState(true);
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
@@ -390,31 +390,36 @@ function Dashboard() {
 
           {rightTab === 'logs' ? (
             <>
-              <div className="p-3 flex items-center justify-between border-b border-outline-variant/10 shrink-0 bg-surface-container-lowest">
+              <div className="relative p-3 flex items-center justify-between border-b border-outline-variant/10 shrink-0 bg-surface-container-lowest">
                 <span className="text-[10px] font-bold tracking-widest text-on-surface-variant uppercase">Filter Logs</span>
-                <div className="abflex items-center p-1 cursor-pointer transition-all duration-200 group">
-                  <LogFilter
-                    servers={servers}
-                    devices={devices}
-                    eventTypes={eventTypes}
-                    selectedServers={selectedServers}
-                    selectedDevices={selectedDevices}
-                    selectedEventType={selectedEventType}
-                    onToggleServer={toggleServer}
-                    onToggleDevice={toggleDevice}
-                    onSelectEventType={setSelectedEventType}
-                  />
-                </div>
+                <LogFilter
+                  servers={servers}
+                  devices={devices}
+                  eventTypes={eventTypes}
+                  selectedServers={selectedServers}
+                  selectedDevices={selectedDevices}
+                  selectedEventType={selectedEventType}
+                  onToggleServer={toggleServer}
+                  onToggleDevice={toggleDevice}
+                  onSelectEventType={setSelectedEventType}
+                />
               </div>
 
               <div className="app-logs-container flex-1 overflow-y-auto custom-scrollbar p-0 bg-surface-container-low/10">
                 {filteredLogs.length > 0 ? (
                   <div className="flex flex-col">
-                    {filteredLogs.slice(0, 75).map((log, idx) => (
+                    {filteredLogs.slice(0, visibleAlerts).map((log, idx) => (
                       <div key={log.id || idx} className="border-b border-outline-variant/5">
                         <LogEntry log={log} onClick={() => setSelectedLog(log)} />
                       </div>
                     ))}
+                    {visibleAlerts < filteredLogs.length && (
+                      <button
+                        onClick={() => setVisibleAlerts(prev => prev + 10)}
+                        className='p-2 text-[12px] uppercase font-bold tracking-widest text-on-surface-variant hover:bg-surface-container-low/50 hover:text-white 
+                      transition-all duration-200
+                      border-b-2 border-transparent cursor-pointer'>See more alerts</button>
+                    )}
                   </div>
                 ) : (
                   <div className="p-10 flex flex-col items-center justify-center opacity-20 gap-2 h-full text-center">

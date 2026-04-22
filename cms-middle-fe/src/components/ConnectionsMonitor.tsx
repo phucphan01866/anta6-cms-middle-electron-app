@@ -123,7 +123,7 @@ export function ConnectionsMonitor({
 
       {/* Main Connections Monitor Area */}
       <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
-        <div className="max-w-[1400px] mx-auto flex flex-col gap-6 animate-in fade-in duration-500 h-full">
+        <div className="max-w-[1400px] mx-auto flex flex-col gap-6 animate-in fade-in duration-500">
 
           {/* Quick System Info Overview */}
           <div className="flex items-center justify-between border-b border-outline-variant/10 pb-4 shrink-0">
@@ -219,7 +219,7 @@ export function ConnectionsMonitor({
                 )}
                 <button
                   onClick={() => openNetworkForm('input')}
-                  className="mt-2 w-full py-4 border border-dashed border-secondary/30 text-secondary hover:bg-secondary/10 bg-secondary/5 rounded-md flex justify-center items-center gap-2 text-[10px] uppercase font-bold tracking-widest transition-colors"
+                  className="mt-2 w-full py-4 border border-dashed border-secondary/30 text-secondary hover:bg-secondary/10 bg-secondary/5 rounded-md flex justify-center items-center gap-2 text-[10px] uppercase font-bold tracking-widest transition-colors cursor-pointer"
                 >
                   <Plus className="w-4 h-4" /> Add Input Connection
                 </button>
@@ -242,7 +242,7 @@ export function ConnectionsMonitor({
                 )}
                 <button
                   onClick={() => openNetworkForm('output')}
-                  className="mt-2 w-full py-4 border border-dashed border-primary/30 text-primary hover:bg-primary/10 bg-primary/5 rounded-md flex justify-center items-center gap-2 text-[10px] uppercase font-bold tracking-widest transition-colors"
+                  className="mt-2 w-full py-4 border border-dashed border-primary/30 text-primary hover:bg-primary/10 bg-primary/5 rounded-md flex justify-center items-center gap-2 text-[10px] uppercase font-bold tracking-widest transition-colors cursor-pointer"
                 >
                   <Plus className="w-4 h-4" /> Add Output Connection
                 </button>
