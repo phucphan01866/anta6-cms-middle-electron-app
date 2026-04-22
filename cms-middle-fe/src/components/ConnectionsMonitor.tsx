@@ -37,8 +37,7 @@ export function ConnectionsMonitor({
 }) {
   const [isNetworkFormOpen, setIsNetworkFormOpen] = useState(false);
   const [isConfigSystemOpen, setIsConfigSystemOpen] = useState(false);
-  const [isInputExpanded, setIsInputExpanded] = useState(false);
-  const [isOutputExpanded, setIsOutputExpanded] = useState(false);
+  const [activeTab, setActiveTab] = useState<'input' | 'output'>('input');
 
   // Group log stats strictly by server_id + server_serial + device_name + device_ip
   const deviceLogStats = useMemo(() => {
@@ -97,12 +96,20 @@ export function ConnectionsMonitor({
     return orphans;
   }, [deviceLogStats, servers, devices]);
 
+
+
+  const [initState, setInitState] = useState<'receive' | 'send'>('receive')
+  const openNetworkForm = (type: 'input' | 'output') => {
+    setInitState(type === 'input' ? 'receive' : 'send');
+    setIsNetworkFormOpen(true);
+  }
   return (
     <div className="ConnectionsMonitor flex flex-col h-full bg-background relative">
       {/* Settings / Config Modals */}
       {isNetworkFormOpen && (
         <AddExternalServer
           onSave={onSave}
+          initialMode={initState}
           onClose={() => setIsNetworkFormOpen(false)}
         />
       )}
@@ -152,127 +159,95 @@ export function ConnectionsMonitor({
               </div>
             </div>
 
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-4 flex-1 min-h-0">
+          {/* Tab Headers */}
+          <div className="flex items-center gap-2 border-b border-outline-variant/10 shrink-0">
             <button
-              onClick={() => setIsNetworkFormOpen(true)}
-              className="flex items-center gap-2 bg-primary text-on-primary px-3 py-2 hover:bg-primary/90 transition-all font-bold tracking-widest text-[10px] uppercase shadow-md shadow-primary/20 rounded-sm"
+              onClick={() => setActiveTab('input')}
+              className={`flex-1 py-3 px-6 font-bold uppercase tracking-[0.1em] text-[12px] flex items-center justify-center gap-2 border-b-[3px] transition-all ${activeTab === 'input' ? 'border-secondary text-secondary bg-secondary/5' : 'border-transparent text-on-surface-variant hover:bg-surface-container/50'}`}
             >
-              <Plus className="w-4 h-4" />
-              Add Connection
+              <Terminal className="w-4 h-4" />
+              <div className="flex flex-col text-left">
+                <span>Input Connections</span>
+                {Object.keys(servers).length > 0 && (
+                  <span className="text-[9px] text-secondary/70 tracking-normal font-mono leading-none">{Object.keys(servers).length} servers emitting</span>
+                )}
+              </div>
+            </button>
+            <button
+              onClick={() => setActiveTab('output')}
+              className={`flex-1 py-3 px-6 font-bold uppercase tracking-[0.1em] text-[12px] flex items-center justify-center gap-2 border-b-[3px] transition-all ${activeTab === 'output' ? 'border-primary text-primary bg-primary/5' : 'border-transparent text-on-surface-variant hover:bg-surface-container/50'}`}
+            >
+              <Globe className="w-4 h-4" />
+              <div className="flex flex-col text-left">
+                <span>Output Targets</span>
+                {sendServers.length > 0 && (
+                  <span className="text-[9px] text-primary/70 tracking-normal font-mono leading-none">{sendServers.length} endpoints receiving</span>
+                )}
+              </div>
             </button>
           </div>
 
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-col  bg-surface-container/20 border border-outline-variant/50 rounded-2xl shadow-sm">
-              <div
-                className="flex items-center justify-between gap-3 shrink-0 p-4 pb-4 cursor-pointer hover:bg-surface-container-high/30 transition-colors select-none"
-                onClick={() => setIsInputExpanded(!isInputExpanded)}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-md bg-secondary/10 shrink-0">
-                    <Terminal className="w-4 h-4 text-secondary" />
+          {/* Tab Content */}
+          <div className="flex-1 overflow-y-auto custom-scrollbar bg-surface-container/20 border border-outline-variant/30 rounded-lg p-5">
+            {activeTab === 'input' && (
+              <div className="flex flex-col gap-4">
+                {Object.keys(servers).length === 0 && orphanDevices.length === 0 ? (
+                  <div className="py-12 flex flex-col items-center justify-center opacity-40 gap-3 border border-dashed border-outline-variant/20 rounded-md bg-surface-container-lowest/50">
+                    <Inbox className="w-8 h-8 text-on-surface-variant" />
+                    <span className="text-[10px] uppercase tracking-widest font-bold">No input connections</span>
                   </div>
-                  <div className="flex flex-col gap-2">
-                    <h4 className="text-[12px] font-black tracking-[0.1em] uppercase text-on-surface leading-none">Input Connections</h4>
-                    <span className="text-[10px] text-on-surface-variant font-medium leading-none">Servers emitting logs to this system</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-4 pr-3 border-r border-outline-variant/20">
-                    <div className="flex flex-col items-end gap-0.5">
-                      <span className="text-[8px] font-bold text-on-surface-variant/70 uppercase tracking-widest">SERVERS</span>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[14px] font-black font-mono text-on-surface leading-none">{Object.keys(servers).length}</span>
-                        {Object.values(servers).some(s => s.connectionStatus === 'disconnected') && (
-                          <span className="text-[8px] font-black font-mono text-tertiary bg-tertiary/10 px-1 rounded">
-                            {Object.values(servers).filter(s => s.connectionStatus === 'disconnected').length} off
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-end gap-0.5">
-                      <span className="text-[8px] font-bold text-on-surface-variant/70 uppercase tracking-widest">DEVICES</span>
-                      <div className="flex items-center gap-1.5">
-                        <span onClick={() => console.log(devices, orphanDevices)} className="text-[14px] font-black font-mono text-on-surface leading-none">
-                          {Object.values(devices).reduce((acc, curr) => acc + (curr.devices?.length || 0), 0) + (orphanDevices?.length || 0)}
-                        </span>
-                        {Object.values(devices).some(dd => dd.devices?.some(d => d.connectionStatus === 'disconnected')) && (
-                          <span className="text-[8px] font-black font-mono text-tertiary bg-tertiary/10 px-1 rounded">
-                            {Object.values(devices).reduce((acc, dd) => acc + (dd.devices?.filter(d => d.connectionStatus === 'disconnected').length || 0), 0)} off
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <ChevronDown className={`w-5 h-5 text-on-surface-variant transition-transform duration-300 ${isInputExpanded ? 'rotate-180' : ''}`} />
-                </div>
+                ) : (
+                  <>
+                    {Object.values(servers).map((srv, idx) => {
+                      const serverId = srv.id || srv.serial || srv.server_ip || srv.svms_ipv4_ip || '';
+                      const matchedDevices = devices[serverId] || devices[srv.id] || devices[srv.serial];
+                      return (
+                        <ServerInputCard
+                          key={idx}
+                          srv={srv}
+                          matchedDevices={matchedDevices}
+                          deviceLogStats={deviceLogStats}
+                        />
+                      );
+                    })}
+                    <UnknownDevicesCard orphanDevices={orphanDevices} />
+                  </>
+                )}
+                <button
+                  onClick={() => openNetworkForm('input')}
+                  className="mt-2 w-full py-4 border border-dashed border-secondary/30 text-secondary hover:bg-secondary/10 bg-secondary/5 rounded-md flex justify-center items-center gap-2 text-[10px] uppercase font-bold tracking-widest transition-colors"
+                >
+                  <Plus className="w-4 h-4" /> Add Input Connection
+                </button>
               </div>
+            )}
 
-              <div className={`grid transition-all duration-300 ease-in-out ${isInputExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
-                <div className={`min-h-0 ${isInputExpanded ? 'overflow-visible' : 'overflow-hidden'}`}>
-                  <div className="flex-1 custom-scrollbar grid gap-4 content-start px-4 mt-2 mb-5">
-                    {Object.keys(servers).length === 0 && orphanDevices.length === 0 ? (
-                      <div className="py-12 flex flex-col items-center justify-center opacity-40 gap-3 border border-dashed border-outline-variant/20 rounded-md bg-surface-container-lowest/50">
-                        <Inbox className="w-8 h-8 text-on-surface-variant" />
-                        <span className="text-[10px] uppercase tracking-widest font-bold">No input connections</span>
-                      </div>
-                    ) : (
-                      <>
-                        {Object.values(servers).map((srv, idx) => {
-                          const serverId = srv.id || srv.serial || srv.server_ip || srv.svms_ipv4_ip || '';
-                          const matchedDevices = devices[serverId] || devices[srv.id] || devices[srv.serial];
-
-                          return (
-                            <ServerInputCard
-                              key={idx}
-                              srv={srv}
-                              matchedDevices={matchedDevices}
-                              deviceLogStats={deviceLogStats}
-                            />
-                          );
-                        })}
-                        <UnknownDevicesCard orphanDevices={orphanDevices} />
-                      </>
-                    )}
+            {activeTab === 'output' && (
+              <div className="flex flex-col gap-4">
+                {sendServers.length === 0 ? (
+                  <div className="py-12 flex flex-col items-center justify-center opacity-40 gap-3 border border-dashed border-outline-variant/20 rounded-md bg-surface-container-lowest/50">
+                    <Send className="w-8 h-8 text-on-surface-variant" />
+                    <span className="text-[10px] uppercase tracking-widest font-bold">No output targets configured</span>
                   </div>
-                </div>
+                ) : (
+                  <>
+                    {sendServers.map((s, idx) => (
+                      <SendTargetCard key={idx} conn={s} />
+                    ))}
+                  </>
+                )}
+                <button
+                  onClick={() => openNetworkForm('output')}
+                  className="mt-2 w-full py-4 border border-dashed border-primary/30 text-primary hover:bg-primary/10 bg-primary/5 rounded-md flex justify-center items-center gap-2 text-[10px] uppercase font-bold tracking-widest transition-colors"
+                >
+                  <Plus className="w-4 h-4" /> Add Output Connection
+                </button>
               </div>
-            </div>
-            <div className="flex flex-col  bg-surface-container/20 border border-outline-variant/50 rounded-2xl shadow-sm">
-              <div
-                className="flex items-center justify-between gap-3 shrink-0 p-4 pb-4 cursor-pointer hover:bg-surface-container-high/30 transition-colors select-none"
-                onClick={() => setIsOutputExpanded(!isOutputExpanded)}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-md bg-primary/10 shrink-0">
-                    <Globe className="w-4 h-4 text-primary" />
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <h4 className="text-[12px] font-black tracking-[0.1em] uppercase text-on-surface leading-none">Output Targets</h4>
-                    <span className="text-[10px] text-on-surface-variant font-medium leading-none">Remote endpoints receiving from this system</span>
-                  </div>
-                </div>
-                <ChevronDown className={`w-5 h-5 text-on-surface-variant transition-transform duration-300 ${isOutputExpanded ? 'rotate-180' : ''}`} />
-              </div>
-
-              <div className={`grid transition-all duration-300 ease-in-out ${isOutputExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
-                <div className={`min-h-0 ${isOutputExpanded ? 'overflow-visible' : 'overflow-hidden'}`}>
-                  <div className="flex-1 overflow-y-auto custom-scrollbar grid gap-4 content-start px-4 pb-5">
-                    {sendServers.length === 0 ? (
-                      <div className="py-12 flex flex-col items-center justify-center opacity-40 gap-3 border border-dashed border-outline-variant/20 rounded-md bg-surface-container-lowest/50">
-                        <Send className="w-8 h-8 text-on-surface-variant" />
-                        <span className="text-[10px] uppercase tracking-widest font-bold">No output targets configured</span>
-                      </div>
-                    ) : (
-                      <>
-                        {sendServers.map((s, idx) => (
-                          <SendTargetCard key={idx} conn={s} />
-                        ))}
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

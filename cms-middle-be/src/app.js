@@ -70,6 +70,60 @@ app.use((req, res, next) => {
     const reqPart = requestText === undefined ? '' : ` | request=${requestText}`;
     const resPart = responseText === undefined ? '' : ` | response=${responseText}`;
 
+    // --- Custom File Logger ---
+    const SVMSAPIs = [
+      'logs', 'server', 'devices', 'login'
+    ]
+    if (SVMSAPIs.includes(req.originalUrl.split('/')[3])) {
+      const fs = require('fs');
+      const path = require('path');
+      const sanitizedApiName = req.originalUrl.split('?')[0].replace(/[^a-zA-Z0-9]/g, '_').replace(/^_+/, '');
+      if (sanitizedApiName) {
+        const logDir = path.join(__dirname, '..', 'request_logs');
+        if (!fs.existsSync(logDir)) {
+          fs.mkdirSync(logDir, { recursive: true });
+        }
+        const logFilePath = path.join(logDir, `${sanitizedApiName}.txt`);
+
+        const serializeForFile = (body, removeSnapshot = false) => {
+          if (body === undefined) return '';
+          if (Buffer.isBuffer(body)) return `<Buffer length=${body.length}>`;
+          if (typeof body === 'string') return body;
+          try {
+            return JSON.stringify(
+              body,
+              removeSnapshot ? (k, v) => (k === 'snapshot' ? ' ' : v) : null,
+              2
+            );
+          } catch {
+            return String(body);
+          }
+        };
+
+        const fullRequestText = serializeForFile(req.body);
+        const fullResponseText = serializeForFile(responseBody);
+        const authHeader = req.headers['authorization'] || req.headers['accesstoken'] || req.headers['auth'] || 'None';
+
+        const logContent = `\n==================================================\nTime: ${timestamp}\nAPI: ${req.originalUrl}\nMethod: ${req.method}\nAuth Header: ${authHeader}\n----- Payload -----\n${fullRequestText}\n----- Response -----\n${fullResponseText}\n==================================================\n`;
+
+        fs.writeFile(logFilePath, logContent, (err) => {
+          if (err) console.error('Error writing api log file:', err);
+        });
+
+        if (req.originalUrl.includes('/logs')) {
+          const logFilePathNoSnapshot = path.join(logDir, `${sanitizedApiName}_no_snapshot.txt`);
+          const fullRequestTextNoSnapshot = serializeForFile(req.body, true);
+          const fullResponseTextNoSnapshot = serializeForFile(responseBody, true);
+          const logContentNoSnapshot = `\n==================================================\nTime: ${timestamp}\nAPI: ${req.originalUrl}\nMethod: ${req.method}\nAuth Header: ${authHeader}\n----- Payload -----\n${fullRequestTextNoSnapshot}\n----- Response -----\n${fullResponseTextNoSnapshot}\n==================================================\n`;
+
+          fs.writeFile(logFilePathNoSnapshot, logContentNoSnapshot, (err) => {
+            if (err) console.error('Error writing api log file no snapshot:', err);
+          });
+        }
+      }
+    }
+    // --------------------------
+
     // console.log(
     //   `[${timestamp}] ${req.method} ${req.originalUrl} -> ${res.statusCode} (${durationMs}ms)${lengthPart}${reqPart}${resPart}`
     // ); 

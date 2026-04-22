@@ -23,17 +23,23 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 function LogFilter({
   servers,
   devices,
+  eventTypes,
   selectedServers,
   selectedDevices,
+  selectedEventType,
   onToggleServer,
   onToggleDevice,
+  onSelectEventType,
 }: {
   servers: Record<string, ServerData>;
   devices: Record<string, DeviceData>;
+  eventTypes: string[];
   selectedServers: Set<string>;
   selectedDevices: Set<string>;
+  selectedEventType: string | null;
   onToggleServer: (id: string) => void;
   onToggleDevice: (ip: string) => void;
+  onSelectEventType: (type: string | null) => void;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -63,7 +69,7 @@ function LogFilter({
     });
   }, [devices]);
 
-  const activeCount = selectedServers.size + selectedDevices.size;
+  const activeCount = selectedServers.size + selectedDevices.size + (selectedEventType ? 1 : 0);
 
   return (
     <div ref={ref} className="app-log-filter relative">
@@ -150,6 +156,48 @@ function LogFilter({
               </div>
             )}
           </div>
+
+          <div className="mx-3 my-1 border-t border-outline-variant/10" />
+
+          {/* Event Types */}
+          <div className="px-3 pb-3 pt-1">
+            <div className="flex items-center gap-1.5 mb-2">
+              <Terminal className="w-3 h-3 text-warning" />
+              <span className="text-[9px] font-black uppercase tracking-widest text-warning">Event Types</span>
+            </div>
+            {eventTypes.length === 0 ? (
+              <p className="text-[10px] text-on-surface-variant/40 py-1 pl-1">Chưa có event type nào</p>
+            ) : (
+              <div className="flex flex-col gap-0.5 max-h-40 overflow-y-auto custom-scrollbar">
+                <button
+                  onClick={() => onSelectEventType(null)}
+                  className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-surface-container transition-colors w-full text-left"
+                >
+                  <div className={`w-3.5 h-3.5 rounded-sm border-2 flex items-center justify-center shrink-0 transition-colors ${!selectedEventType ? 'bg-warning border-warning' : 'border-outline-variant'
+                    }`}>
+                    {!selectedEventType && <Check className="w-2.5 h-2.5 text-white stroke-[3]" />}
+                  </div>
+                  <span className="text-[11px] font-semibold text-on-surface truncate">Tất cả (All)</span>
+                </button>
+                {eventTypes.map(type => {
+                  const checked = selectedEventType === type;
+                  return (
+                    <button
+                      key={type}
+                      onClick={() => onSelectEventType(type)}
+                      className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-surface-container transition-colors w-full text-left"
+                    >
+                      <div className={`w-3.5 h-3.5 rounded-sm border-2 flex items-center justify-center shrink-0 transition-colors ${checked ? 'bg-warning border-warning' : 'border-outline-variant'
+                        }`}>
+                        {checked && <Check className="w-2.5 h-2.5 text-white stroke-[3]" />}
+                      </div>
+                      <span className="text-[11px] font-semibold text-on-surface truncate">{type}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -171,7 +219,10 @@ function Dashboard() {
     receiveServers,
     handleAddExternalServer,
     handleRemoveConnection,
-    socket
+    socket,
+    eventTypes,
+    selectedEventType,
+    setSelectedEventType
   } = useSocketManager();
 
   const [selectedLog, setSelectedLog] = useState<LogData | null>(null);
@@ -200,18 +251,24 @@ function Dashboard() {
   const toggleDevice = (ip: string) =>
     setSelectedDevices(prev => { const s = new Set(prev); s.has(ip) ? s.delete(ip) : s.add(ip); return s; });
 
-  // Lọc logs theo server và/hoặc device đang được chọn
+  // Lọc logs theo server, device và event_type đang được chọn
   const filteredLogs = useMemo(() => {
-    if (selectedServers.size === 0 && selectedDevices.size === 0) return logs;
+    if (selectedServers.size === 0 && selectedDevices.size === 0 && !selectedEventType) return logs;
     return logs.filter(log => {
       const logServerId = log.server?.server_id || log.server?.serial || '';
       const serverMatch = selectedServers.size > 0 && selectedServers.has(logServerId);
       const devKey = `${log.server?.server_id}_${log.device_ip}_${log.device_name}`;
       const deviceMatch = selectedDevices.size > 0 && selectedDevices.has(devKey);
-      // Log hiển thị nếu khớp với bất kỳ filter nào đang bật
-      return serverMatch || deviceMatch;
+
+      const matchOrigin = (selectedServers.size === 0 && selectedDevices.size === 0)
+        ? true
+        : (serverMatch || deviceMatch);
+
+      const matchEventType = !selectedEventType || log.log_type === selectedEventType;
+
+      return matchOrigin && matchEventType;
     });
-  }, [logs, selectedServers, selectedDevices]);
+  }, [logs, selectedServers, selectedDevices, selectedEventType]);
 
 
   // Logout on Escape key
@@ -339,10 +396,13 @@ function Dashboard() {
                   <LogFilter
                     servers={servers}
                     devices={devices}
+                    eventTypes={eventTypes}
                     selectedServers={selectedServers}
                     selectedDevices={selectedDevices}
+                    selectedEventType={selectedEventType}
                     onToggleServer={toggleServer}
                     onToggleDevice={toggleDevice}
+                    onSelectEventType={setSelectedEventType}
                   />
                 </div>
               </div>

@@ -132,7 +132,7 @@ router.post('/api/v1/server', async (req, res) => {
     ...req.body,
     svms_ipv4_ip: req.body.svms_ipv4_ip || senderIp,
   });
-  return res.status(200).send({ success: true, count: dataArr.length });
+  return res.status(200).send({ success: true });
 });
 
 // ─── Nhận danh sách devices từ SVMS hoặc qua Sync ───────────────────────────
@@ -212,7 +212,7 @@ router.post('/api/v1/devices', async (req, res) => {
     }
   }
   forwardToSendTargets('/api/v1/devices', req.body);
-  return res.status(200).send({ success: true, count: dataArr.length });
+  return res.status(200).send({ success: true });
 });
 
 

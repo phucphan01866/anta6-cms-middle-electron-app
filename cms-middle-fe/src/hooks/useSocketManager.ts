@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { socket, updateSocketUrlAsync } from '../socket';
 import type { LogData, SystemConnection, SystemConfig, ServerData, DeviceData } from '../types';
 import apiClient from '../api/apiClient';
@@ -16,6 +16,7 @@ export function useSocketManager() {
   }, [socket.connected]);
 
   const [logs, setLogs] = useState<LogData[]>([]);
+  const [eventTypes, setEventTypes] = useState<string[]>([]);
   const [servers, setServers] = useState<Record<string, ServerData>>({});
   const [devices, setDevices] = useState<Record<string, DeviceData>>({});
   const [systemConfig, setSystemConfigState] = useState<SystemConfig>({
@@ -286,6 +287,7 @@ export function useSocketManager() {
       }
 
       setLogs(prev => [newLog, ...prev].slice(0, env.MAX_LOGS_LIST));
+      setEventTypes(prev => prev.includes(newLog.log_type) ? prev : [...prev, newLog.log_type]);
     };
 
     // Cập nhật trực tiếp vào, thêm/sửa/xóa đã nằm ở server BE
@@ -377,6 +379,8 @@ export function useSocketManager() {
     };
   }, []);
 
+  const [selectedEventType, setSelectedEventType] = useState<string | null>(null);
+
   return {
     socket,
     isConnected,
@@ -388,6 +392,9 @@ export function useSocketManager() {
     sendServers,
     receiveServers,
     handleAddExternalServer,
-    handleRemoveConnection
+    handleRemoveConnection,
+    eventTypes,
+    selectedEventType,
+    setSelectedEventType
   };
 }
