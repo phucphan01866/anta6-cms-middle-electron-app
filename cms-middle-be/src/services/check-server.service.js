@@ -66,7 +66,6 @@ const startMonitoring = () => {
       // Với mỗi server, tạo promise kiểm tra cho tất cả các port mục tiêu
       TARGET_PORTS.forEach(port => {
         checkPromises.push(
-          // pingServer(ip, port + 1).then(res => ({
           pingServer(ip, port).then(res => ({
             Server: name,
             IP: ip,

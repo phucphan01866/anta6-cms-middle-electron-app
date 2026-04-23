@@ -48,14 +48,19 @@ export function LogPopup({ log, onClose }: { log: LogData, onClose: () => void }
                 <h4 className="text-[10px] font-black uppercase text-primary tracking-[0.2em] mb-3">System Metadata</h4>
                 <div className="space-y-2">
                   {[
-                    { label: 'Device IP', value: log.cameraIp || 'Internal' },
-                    { label: 'Server', value: log.raw?.body?.server?.serial },
-                    { label: 'Device Name', value: log.raw?.body?.device_name },
-                    { label: 'Log Type', value: log.raw?.body?.log_type },
-                    { label: 'Timestamp', value: log.time },
-                    // { label: 'Connection', value: log.meta }
-                  ].map(item => (
-                    <div key={item.label} className="flex justify-between items-center py-1.5 border-b border-outline-variant/5">
+                    { label: 'Server ID', value: log.server?.server_id || log.raw?.body?.server?.server_id },
+                    { label: 'Server Serial', value: log.server?.serial || log.raw?.body?.server?.serial },
+                    { label: 'Device Name', value: log.device_name || log.raw?.body?.device_name },
+                    { label: 'Device IP', value: log.cameraIp || log.device_ip || 'Internal' },
+                    { label: 'Device Port', value: log.raw?.body?.device_port },
+                    { label: 'Device Index', value: log.device_index ?? log.raw?.body?.device_index },
+                    { label: 'Device Type', value: log.device_type || log.raw?.body?.device_type },
+                    { label: 'Log Type', value: log.log_type || log.raw?.body?.log_type },
+                    { label: 'Description', value: log.description || log.raw?.body?.description },
+                    { label: 'Source IP', value: log.ip || log.raw?.ip },
+                    { label: 'Timestamp', value: log.time ? new Date(log.time * 1000).toLocaleString() : '—' },
+                  ].filter(item => item.value !== undefined && item.value !== null && item.value !== '').map(item => (
+                    <div key={item.label} className="flex justify-between items-center py-1.5">
                       <span className="text-[9px] font-bold text-on-surface-variant uppercase tracking-wider">{item.label}</span>
                       <span className="text-[10px] font-mono text-on-surface font-medium">{item.value}</span>
                     </div>

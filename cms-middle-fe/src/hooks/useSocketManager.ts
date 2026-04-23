@@ -1,13 +1,15 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { socket, updateSocketUrlAsync } from '../socket';
 import type { LogData, SystemConnection, SystemConfig, ServerData, DeviceData } from '../types';
 import apiClient from '../api/apiClient';
 import axios from 'axios';
 
 const env = {
-  MAX_LOGS_LIST: Number(import.meta.env.VITE_MAX_LOGS_LIST) || 5000
+  MAX_LOGS_LIST: Number(import.meta.env.VITE_MAX_LOGS_LIST) || 5000,
+  KEEP_TOTAL_LOG_COUNT: import.meta.env.VITE_KEEP_TOTAL_LOG_COUNT === 'true'
 };
 
+console.log('[DEBUG_ENV] VITE_MAX_LOGS_LIST:', import.meta.env.VITE_MAX_LOGS_LIST, '->', env.MAX_LOGS_LIST);
 
 export function useSocketManager() {
   const [isConnected, setIsConnected] = useState(socket.connected);
@@ -16,7 +18,32 @@ export function useSocketManager() {
   }, [socket.connected]);
 
   const [logs, setLogs] = useState<LogData[]>([]);
+  const [totalLogCount, setTotalLogCount] = useState(0);
   const [eventTypes, setEventTypes] = useState<string[]>([]);
+
+  // ─── Log Batching: buffer incoming logs and flush every 500ms ───────────────
+  const logBufferRef = useRef<LogData[]>([]);
+  const eventTypeBufferRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    const flushInterval = setInterval(() => {
+      if (logBufferRef.current.length > 0) {
+        const buffered = logBufferRef.current;
+        logBufferRef.current = [];
+        setTotalLogCount(prev => prev + buffered.length);
+        setLogs(prev => [...buffered, ...prev].slice(0, env.MAX_LOGS_LIST));
+      }
+      if (eventTypeBufferRef.current.size > 0) {
+        const newTypes = eventTypeBufferRef.current;
+        eventTypeBufferRef.current = new Set();
+        setEventTypes(prev => {
+          const merged = new Set([...prev, ...newTypes]);
+          return merged.size !== prev.length ? Array.from(merged) : prev;
+        });
+      }
+    }, 500);
+    return () => clearInterval(flushInterval);
+  }, []);
   const [servers, setServers] = useState<Record<string, ServerData>>({});
   const [devices, setDevices] = useState<Record<string, DeviceData>>({});
   const [systemConfig, setSystemConfigState] = useState<SystemConfig>({
@@ -234,10 +261,8 @@ export function useSocketManager() {
       setReceiveServers(data.receiveList || []);
     }
 
-    function onUpdateClients(clients: SystemConnection[]) {
-      // Giờ đây update-client chỉ dùng để hiển thị các client đang kết nối VÀO BE (Active Monitoring)
-      // Không ghi đè lên sendServers (Targets) nữa
-    }
+    // update-client không còn sử dụng — giữ listener để tránh socket warning
+    function onUpdateClients() { }
 
     function onDisconnectedExternalServer(raw: any) {
       const { url, type } = raw;
@@ -286,8 +311,9 @@ export function useSocketManager() {
         updateReceiveServer(data, true);
       }
 
-      setLogs(prev => [newLog, ...prev].slice(0, env.MAX_LOGS_LIST));
-      setEventTypes(prev => prev.includes(newLog.log_type) ? prev : [...prev, newLog.log_type]);
+      // Push to buffer instead of direct setState — flushed every 500ms
+      logBufferRef.current.push(newLog);
+      eventTypeBufferRef.current.add(newLog.log_type);
     };
 
     // Cập nhật trực tiếp vào, thêm/sửa/xóa đã nằm ở server BE
@@ -347,7 +373,6 @@ export function useSocketManager() {
     socket.on('external-server-disconnect', onDisconnectedExternalServer);
     socket.on('external-server-err-connect', onErrorExternalServer);
     socket.on('receive-log', onReceiveLog);
-    // update client hiện đang không dùng
     socket.on('update-client', onUpdateClients);
     socket.on('log-dispatched', onLogDispatched);
     socket.on('receive-server-information', onReceiveServerInformation);
@@ -355,10 +380,6 @@ export function useSocketManager() {
     socket.on('update-connections', onUpdateConnections);
     socket.on('server-connection-status', onServerConnectionStatus);
     socket.on('device-connection-status', onDeviceConnectionStatus);
-    socket.on('test', (data) => {
-      // console.log('test data', data)
-      alert('we got new url: ' + data);
-    })
 
     return () => {
       socket.off('external-server-connecting', onConnectingExternalServer);
@@ -373,9 +394,6 @@ export function useSocketManager() {
       socket.off('update-connections', onUpdateConnections);
       socket.off('server-connection-status', onServerConnectionStatus);
       socket.off('device-connection-status', onDeviceConnectionStatus);
-      socket.off('test', (data) => {
-        console.log('test data', data)
-      })
     };
   }, []);
 
@@ -395,6 +413,8 @@ export function useSocketManager() {
     handleRemoveConnection,
     eventTypes,
     selectedEventType,
-    setSelectedEventType
+    setSelectedEventType,
+    totalLogCount,
+    KEEP_TOTAL_LOG_COUNT: env.KEEP_TOTAL_LOG_COUNT
   };
 }

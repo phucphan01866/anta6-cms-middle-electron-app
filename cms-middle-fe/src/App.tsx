@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { StatusBar } from './components/StatusBar/StatusBar';
+
 import { ConnectionsMonitor } from './components/ConnectionsMonitor';
 import { LogPopup } from './components/LogPopup';
 import { useSocketManager } from './hooks/useSocketManager';
@@ -221,8 +221,12 @@ function Dashboard() {
     socket,
     eventTypes,
     selectedEventType,
-    setSelectedEventType
+    setSelectedEventType,
+    totalLogCount,
+    KEEP_TOTAL_LOG_COUNT
   } = useSocketManager();
+
+  const displayLogCount = KEEP_TOTAL_LOG_COUNT ? totalLogCount : logs.length;
 
   const [selectedLog, setSelectedLog] = useState<LogData | null>(null);
   const [selectedServers, setSelectedServers] = useState<Set<string>>(new Set());
@@ -339,21 +343,6 @@ function Dashboard() {
               />
             )}
           </div>
-          {/* <div className="app-status-bar-wrapper shrink-0">
-            <StatusBar
-              socket={socket}
-              isConnected={isConnected}
-              systemConfig={systemConfig}
-              onSaveSystemConfig={(config) => { setSystemConfig(config) }}
-              sendServers={sendServers}
-              receiveServers={receiveServers}
-              logs={logs}
-              servers={servers}
-              devices={devices}
-              onSave={(ip, port, mode) => handleAddExternalServer(ip, port, mode)}
-              onRemoveConnection={(ip: string, port: string, mode: 'receive' | 'send') => handleRemoveConnection(ip, port, mode)}
-            />
-          </div> */}
         </div>
 
         {/* Right Section — fixed bottom drawer on narrow screens */}
@@ -378,7 +367,7 @@ function Dashboard() {
               onClick={() => setRightTab('logs')}
               className={`h-full flex-3 py-3 text-[10px] tracking-widest font-bold uppercase transition-colors flex items-center justify-center gap-2 ${rightTab === 'logs' ? 'text-primary border-b-2 border-primary bg-primary/5' : 'text-on-surface-variant hover:bg-surface-container-low/50 border-b-2 border-transparent'}`}
             >
-              <Terminal className="w-3.5 h-3.5" />Logs ({logs.length})
+              <Terminal className="w-3.5 h-3.5" />Logs ({displayLogCount})
             </button>
             <button
               onClick={() => setRightTab('devices')}

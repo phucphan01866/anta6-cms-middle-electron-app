@@ -1,10 +1,8 @@
 // ─── NOTIFICATION & CLIENT HELPERS ────────────────────────────────────────────
+const axios = require('axios');
 const { getClientSockets, connections } = require('../socketState');
 const { port } = require('../config');
 
-/**
- * Emit trạng thái kết nối external server cho tất cả FE clients - general
- */
 /**
  * Emit connection status of an external server to all FE clients.
  * @param {string} url - The URL of the external server.
@@ -27,9 +25,6 @@ const notifyStatusToClients = (url = null, mode = 'send', status, data = null) =
   clientSockets.emit(eventName, { ...payload, data });
 };
 
-/**
- * Lấy danh sách các client đang kết nối vào server này - bỏ
- */
 /**
  * Get detailed information about all currently connected socket clients.
  * @returns {Promise<Array>} List of client objects { socketId, ip, port, status, mode, sentCount }.
@@ -54,9 +49,6 @@ const getActiveClients = async () => {
 };
 
 /**
- \* Sync danh sách clients hiện tại cho tất cả FE 
- */
-/**
  * Sync the current active client list to all connected frontends.
  */
 const syncClientsToFrontend = async () => {
@@ -65,6 +57,9 @@ const syncClientsToFrontend = async () => {
   clientSockets.emit('update-client', clients);
 };
 
+/**
+ * Sync the current connections list to all connected frontends.
+ */
 const syncConnectionsToFrontend = () => {
   const clientSockets = getClientSockets();
   const sendList = connections.filter(c => c.mode === 'send');
@@ -72,9 +67,6 @@ const syncConnectionsToFrontend = () => {
   clientSockets.emit('update-connections', { sendList, receiveList });
 };
 
-/**
- * Xóa một connection khỏi danh sách connections (metadata only, no socket)
- */
 /**
  * Remove a connection from the global connections array and notify clients.
  * @param {string} url - The URL of the connection to remove.
@@ -100,9 +92,6 @@ const removeConnection = (url) => {
 };
 
 /**
- * Ngắt kết nối một client đang kết nối vào server này (theo socketId).
- */
-/**
  * Forcefully disconnect a client socket by its ID.
  * @param {string} socketId - The ID of the socket to disconnect.
  * @returns {Promise<object>} { success: boolean, message: string }
@@ -120,7 +109,12 @@ const disconnectClientSocket = async (socketId) => {
   return { success: true, message: `Disconnected ${socketId}` };
 };
 
-
+/**
+ * Ping a URL via healthcheck endpoint.
+ * @param {string} url - The URL to ping.
+ * @param {number} timeout - Timeout in ms (default 2000).
+ * @returns {Promise<boolean>}
+ */
 async function pingUrl(url, timeout = 2000) {
   try {
     const res = await axios.get(`${url}/healthcheck`, { timeout });

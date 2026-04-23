@@ -5,10 +5,6 @@ const fs = require('fs');
 
 let mainWindow;
 
-// console.log('Dev server URL:', process.env.VITE_DEV_SERVER_URL); // Vite tự inject
-// console.log('process.env.VITE_HOST', process.env.VITE_HOST);
-// console.log('process.env.VITE_PORT', process.env.VITE_PORT);
-
 const os = require('os');
 
 const SKIP_KEYWORDS = ['Tailscale', 'vEthernet', 'Loopback', 'VMware', 'VirtualBox', 'Pseudo'];
@@ -37,8 +33,6 @@ function getLocalIP() {
   return preferred?.address || '127.0.0.1';
 }
 
-// console.log(`[Electron] Local IP: ${getLocalIP()}`);
-
 // In dev mode, we assume the backend is started via concurrently or separately.
 // For production mode, we might want to start the backend directly here.
 const isDev = !app.isPackaged;
@@ -54,7 +48,8 @@ function startBackend() {
 
   if (fs.existsSync(binaryPath)) {
     console.log('[Electron] Starting Backend Sidecar...', binaryPath);
-    backendProcess = spawn(binaryPath, [], { cwd: path.dirname(binaryPath) });
+    const executeEnv = { ...process.env, IS_PACKAGED: 'true', USER_DATA_PATH: app.getPath('userData') };
+    backendProcess = spawn(binaryPath, [], { cwd: path.dirname(binaryPath), env: executeEnv });
     backendProcess.stdout.on('data', (data) => console.log(`[BE]: ${data}`));
     backendProcess.stderr.on('data', (data) => console.error(`[BE ERROR]: ${data}`));
   } else {
