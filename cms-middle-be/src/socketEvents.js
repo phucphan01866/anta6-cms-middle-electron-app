@@ -1,5 +1,5 @@
 // ─── SOCKET SERVER EVENTS (BE↔FE only) ───────────────────────────────────────
-const { getClientSockets } = require('./socketState');
+const { getClientSockets, servers, devices } = require('./socketState');
 const { syncClientsToFrontend, syncConnectionsToFrontend } = require('./helpers/notify');
 
 /**
@@ -11,6 +11,16 @@ const setupSocketEvents = () => {
 
   clientSockets.on('connection', (socket) => {
     console.log('connect to fe success');
+
+    socket.on('request-sync', () => {
+      console.log(`[REQUEST-SYNC] Socket ${socket.id} requested data sync upon login.`);
+      socket.emit('receive-server-information', {
+        allServers: Object.fromEntries(servers)
+      });
+      socket.emit('receive-devices-information', {
+        allDevices: Object.fromEntries(devices)
+      });
+    });
 
     // Khởi tạo sentCount cho socket này
     socket.data = { sentCount: 0 };

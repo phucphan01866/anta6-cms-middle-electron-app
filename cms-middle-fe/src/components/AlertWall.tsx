@@ -125,21 +125,45 @@ export function AlertWall({
                     // Cập nhật lại layout mảng grids
                     setGrids(prev => {
                       const clone = [...prev];
-                      // 1. Ghi đè thông tin thiết bị từ chuột vào đúng vị trí nhận 'idx'
-                      clone[idx] = {
-                        gridID: idx,
-                        device: {
-                          server_serial: parsed.server_serial,
-                          server_id: parsed.server_id,
-                          device_ip: parsed.device_ip,
-                          device_name: parsed.device_name,
-                          device_type: parsed.device_type
-                        }
-                      };
+                      const sourceIndex = parsed.sourceFieldIndex;
 
-                      // 2. Nếu chuyển grid từ ô khác, xoá vị trí mảng cũ để thực hiện "Moves" - Di chuyển
-                      if (parsed.sourceFieldIndex !== undefined && parsed.sourceFieldIndex !== idx) {
-                        delete clone[parsed.sourceFieldIndex];
+                      if (sourceIndex !== undefined && sourceIndex !== idx) {
+                        const targetItem = clone[idx];
+
+                        // 1. Đặt thông tin từ nguồn vào đích
+                        clone[idx] = {
+                          gridID: idx,
+                          device: {
+                            server_serial: parsed.server_serial,
+                            server_id: parsed.server_id,
+                            device_ip: parsed.device_ip,
+                            device_name: parsed.device_name,
+                            device_type: parsed.device_type
+                          }
+                        };
+
+                        // 2. Hoán đổi: Nếu ô đích có sẵn thiết bị, đưa thiết bị đó sang vị trí nguồn
+                        if (targetItem) {
+                          clone[sourceIndex] = {
+                            ...targetItem,
+                            gridID: sourceIndex
+                          };
+                        } else {
+                          // Nếu đích trống, ta xoá vị trí cũ (thao tác di chuyển - Move)
+                          delete clone[sourceIndex];
+                        }
+                      } else if (sourceIndex === undefined) {
+                        // Trường hợp kéo từ sidebar danh sách bên ngoài thả vào
+                        clone[idx] = {
+                          gridID: idx,
+                          device: {
+                            server_serial: parsed.server_serial,
+                            server_id: parsed.server_id,
+                            device_ip: parsed.device_ip,
+                            device_name: parsed.device_name,
+                            device_type: parsed.device_type
+                          }
+                        };
                       }
 
                       return clone;

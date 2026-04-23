@@ -431,29 +431,90 @@ function Dashboard() {
             </>
           ) : (
             <div className="flex-1 overflow-y-auto custom-scrollbar p-3 bg-surface-container-low/10 flex flex-col gap-2 relative">
-              <div className="text-[9px] uppercase tracking-widest text-on-surface-variant mb-2 text-center opacity-50 font-bold sticky top-0 py-1">Drag items to assign to grid cells</div>
-              {Object.values(devices).flatMap(server => server.devices?.map(dev => (
-                <div
-                  key={`${server.server.server_id}-${dev.ip}-${dev.name}`}
-                  draggable
-                  onDragStart={(e) => {
-                    e.dataTransfer.setData('application/json', JSON.stringify({
-                      server_serial: server.server.serial,
-                      server_id: server.server.server_id,
-                      device_ip: dev.ip,
-                      device_name: dev.name,
-                      device_type: dev.type || 'vms'
-                    }));
+              <div className="flex items-center justify-between sticky top-0 py-1 z-10 backdrop-blur-md mb-2 rounded-md px-1">
+                <span className="text-[9px] uppercase tracking-widest text-on-surface-variant opacity-70 font-bold">Drag to assign</span>
+                <button
+                  onClick={() => {
+                    console.log(devices)
+                    setGrids(prevGrids => {
+                      const newGrids = [...prevGrids];
+                      const maxGrids = Math.pow(gridCols, 2);
+                      const allDevices = Object.values(devices).flatMap(server =>
+                        (server.devices || []).map(dev => ({
+                          ...dev,
+                          server_serial: server.server.serial,
+                          server_id: server.server.server_id
+                        }))
+                      );
+                      console.log('allDevices', allDevices)
+                      for (const dev of allDevices) {
+                        const isAssigned = newGrids.some(g => g && g.device.server_id === dev.server_id && g.device.device_ip === dev.ip && g.device.device_name === dev.name);
+                        if (isAssigned) continue;
+
+                        let emptyGridID = -1;
+                        for (let i = 0; i < maxGrids; i++) {
+                          if (!newGrids[i]) {
+                            emptyGridID = i;
+                            break;
+                          }
+                        }
+                        console.log('emptyGridID', emptyGridID)
+                        if (emptyGridID === -1) break;
+
+                        newGrids[emptyGridID] = {
+                          gridID: emptyGridID,
+                          device: {
+                            server_serial: dev.server_serial,
+                            server_id: dev.server_id,
+                            device_ip: dev.ip,
+                            device_name: dev.name,
+                            device_type: dev.type || 'vms'
+                          }
+                        };
+                      }
+                      console.log('newGrids', newGrids)
+                      return newGrids;
+                    });
                   }}
-                  className="p-3 bg-surface-container hover:bg-surface-container-high border border-outline-variant/10 rounded-sm cursor-grab active:cursor-grabbing flex flex-col gap-1 shadow-sm transition-all text-on-surface group"
+                  className="text-[9px] font-bold uppercase tracking-widest bg-primary/20 hover:bg-primary/30 text-primary px-3 py-1.5 rounded transition-all active:scale-95 cursor-pointer shadow-sm"
                 >
-                  <div className="flex justify-between items-center">
-                    <span className="text-[11px] font-bold uppercase tracking-widest group-hover:text-primary transition-colors">{dev.name}</span>
-                    <span className="text-[9px] px-1.5 py-0.5 bg-surface-container-highest rounded text-on-surface-variant uppercase font-medium">{dev.type || 'vms'}</span>
+                  Auto Config
+                </button>
+              </div>
+              {Object.values(devices).flatMap(server => server.devices?.map(dev => {
+                const assignedGrids = grids.filter(g => g.device.server_id === server.server.server_id && g.device.device_ip === dev.ip && g.device.device_name === dev.name);
+                const assignedText = assignedGrids.map(g => g.gridID + 1).join(', ');
+                return (
+                  <div
+                    key={`${server.server.server_id}-${dev.ip}-${dev.name}`}
+                    draggable
+                    title={assignedGrids.length > 0 ? `Đang hiển thị trên ô: ${assignedText}` : undefined}
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData('application/json', JSON.stringify({
+                        server_serial: server.server.serial,
+                        server_id: server.server.server_id,
+                        device_ip: dev.ip,
+                        device_name: dev.name,
+                        device_type: dev.type || 'vms'
+                      }));
+                    }}
+                    className={`p-3 hover:bg-surface-container-high border rounded-sm cursor-grab active:cursor-grabbing flex flex-col gap-1 shadow-sm transition-all text-on-surface group ${assignedGrids.length > 0 ? 'bg-primary/5 border-primary/20' : 'bg-surface-container border-outline-variant/10'}`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex flex-col">
+                        <span className="text-[11px] font-bold uppercase tracking-widest group-hover:text-primary transition-colors truncate">{dev.name}</span>
+                        <div className="flex gap-0.5 overflow-hidden">
+                          <span className="text-[9px] text-on-surface-variant/70 font-mono">
+                            {server.server.server_id} - {dev.ip}</span>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-1 shrink-0">
+                        <span className="text-[9px] px-1.5 py-0.5 bg-surface-container-highest rounded text-on-surface-variant uppercase font-medium">{dev.type || 'vms'}</span>
+                      </div>
+                    </div>
                   </div>
-                  <span className="text-[10px] text-on-surface-variant font-mono">{dev.ip}</span>
-                </div>
-              )))}
+                )
+              }))}
               {!Object.values(devices).some(s => s.devices?.length > 0) && (
                 <div className="p-10 flex flex-col items-center justify-center opacity-30 gap-2 h-full text-center">
                   <MonitorSmartphone className="w-8 h-8" />

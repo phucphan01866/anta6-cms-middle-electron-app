@@ -61,7 +61,9 @@ const LoginPage: React.FC = () => {
     setLoading(true);
     const result = await authApi.login(email, password);
     if (result.success) {
-
+      if (socket.connected) {
+        socket.emit('request-sync');
+      }
       navigate('/dashboard');
     } else {
       setError(result.message || 'Login failed');

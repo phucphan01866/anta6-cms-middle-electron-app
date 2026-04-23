@@ -261,7 +261,7 @@ function UnknownDevicesCard({ orphanDevices }: { orphanDevices: { name: string; 
   if (!orphanDevices || orphanDevices.length === 0) return null;
 
   return (
-    <div className="unknown-devices-card bg-surface-container border border-outline-variant/10 px-4 py-3 rounded-md border-l-[3px] border-l-tertiary/50 shadow-sm transition-all  group">
+    <div className="unknown-devices-card bg-surface-container border border-outline-variant/10 px-4 py-3 pb-4 rounded-md border-l-[3px] border-l-tertiary/50 shadow-sm transition-all  group">
       {/* Server Header */}
       <div
         className="flex items-center justify-between border-b border-outline-variant/5 cursor-pointer select-none"
@@ -291,7 +291,7 @@ function UnknownDevicesCard({ orphanDevices }: { orphanDevices: { name: string; 
         </div>
       </div>
 
-      <div className={`grid transition-all duration-300 ease-in-out ${isExpanded ? 'grid-rows-[1fr] opacity-100 mt-4' : 'grid-rows-[0fr] opacity-0 mt-0'}`}>
+      <div className={`grid transition-all duration-300 ease-in-out ${isExpanded ? 'grid-rows-[1fr] opacity-100 mt-2' : 'grid-rows-[0fr] opacity-0 mt-0'}`}>
         <div className={`min-h-0 ${isExpanded ? 'overflow-visible' : 'overflow-hidden'}`}>
           <div className="grid gap-2 pl-1 border-l-2 border-outline-variant/10 ml-2">
             {orphanDevices.map((device, dIdx) => (
@@ -512,7 +512,7 @@ function ServerInputCard({ srv, matchedDevices, deviceLogStats }: { srv: any, ma
   const iconColor = isDisconnected ? 'text-tertiary' : 'text-secondary';
 
   return (
-    <div className={`server-item-card bg-surface-container border border-outline-variant/10 px-4 py-3 rounded-md border-l-[3px] ${borderColor} shadow-sm transition-all hover:bg-surface-container-high/40 group`}>
+    <div className={`server-item-card bg-surface-container border border-outline-variant/10 px-4 py-3 pb-4 rounded-md border-l-[3px] ${borderColor} shadow-sm transition-all hover:bg-surface-container-high/40 group`}>
       {/* Server Header */}
       <div
         className="flex items-center justify-between border-b border-outline-variant/5 cursor-pointer select-none"
@@ -586,7 +586,7 @@ function ServerInputCard({ srv, matchedDevices, deviceLogStats }: { srv: any, ma
       </div>
 
       {/* Devices list with per-device log counts */}
-      <div className={`grid transition-all duration-300 ease-in-out ${isExpanded ? 'grid-rows-[1fr] opacity-100 mt-4' : 'grid-rows-[0fr] opacity-0 mt-0'}`}>
+      <div className={`grid transition-all duration-300 ease-in-out ${isExpanded ? 'grid-rows-[1fr] opacity-100 mt-2' : 'grid-rows-[0fr] opacity-0 mt-0'}`}>
         <div className={`min-h-0 ${isExpanded ? 'overflow-visible' : 'overflow-hidden'}`}>
           {matchedDevices && matchedDevices.devices.length > 0 ? (
             <div className="grid gap-2 border-l-2 border-outline-variant/10 pl-2 ml-1">
