@@ -21,6 +21,18 @@ app.use(cors({ origin: true, credentials: true }));
 app.use(cookieParser());
 app.use(express.json({ limit: '50mb' }));
 
+let isLogSavingEnabled = true;
+
+app.post('/api/v1/config/log-saving', (req, res) => {
+  if (req.body.enabled !== undefined) {
+    isLogSavingEnabled = !!req.body.enabled;
+  }
+  const logDir = process.env.USER_DATA_PATH 
+    ? path.join(process.env.USER_DATA_PATH, 'request_logs') 
+    : path.join(__dirname, '..', 'request_logs');
+  res.json({ success: true, enabled: isLogSavingEnabled, path: logDir });
+});
+
 // Request Logger
 app.use((req, res, next) => {
   const startedAt = Date.now();
@@ -72,6 +84,7 @@ app.use((req, res, next) => {
     const resPart = responseText === undefined ? '' : ` | response=${responseText}`;
 
     // --- Custom File Logger ---
+    if (!isLogSavingEnabled) return;
     const SVMSAPIs = [
       'logs', 'server', 'devices', 'login'
     ]

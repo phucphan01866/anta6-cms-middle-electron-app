@@ -4,6 +4,7 @@ declare global {
   interface Window {
     electronAPI?: {
       getLocalIP: () => string;
+      getBePort: () => number | null;
     };
   }
 }
@@ -23,7 +24,18 @@ const getBeHost = () => {
   return import.meta.env.VITE_BE_HOST || '127.0.0.1';
 };
 
-const getBePort = () => localStorage.getItem('BE_PORT') || import.meta.env.VITE_BE_PORT || '5050';
+const getBePort = () => {
+  const localPort = localStorage.getItem('BE_PORT');
+  if (localPort) return localPort;
+
+  // Nếu chạy trong Electron vỏ Production, dùng cổng động do hệ điều hành cấp
+  if (typeof window !== 'undefined' && window.electronAPI && window.electronAPI.getBePort) {
+    const electronPort = window.electronAPI.getBePort();
+    if (electronPort) return electronPort.toString();
+  }
+
+  return import.meta.env.VITE_BE_PORT || '5050';
+};
 const beURL = `http://${getBeHost()}:${getBePort()}`;
 
 export const socket = io(beURL, {

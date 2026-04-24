@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import type { LogData, SystemConnection, SystemConfig, ServerData, DeviceData } from '../types';
 import { Plus, Inbox, Activity, Terminal, Cpu, Globe, Send, Wifi, WifiOff, Loader2, ChevronDown, RefreshCw, Trash2, Settings, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 import { AddExternalServer } from './AddExternalServer';
@@ -38,6 +38,30 @@ export function ConnectionsMonitor({
   const [isNetworkFormOpen, setIsNetworkFormOpen] = useState(false);
   const [isConfigSystemOpen, setIsConfigSystemOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'input' | 'output'>('input');
+
+  const [isLogSaving, setIsLogSaving] = useState(() => {
+    const saved = localStorage.getItem('SAVE_LOG_FILES');
+    return saved !== 'false';
+  });
+
+  const toggleLogSaving = async () => {
+    const newState = !isLogSaving;
+    setIsLogSaving(newState);
+    localStorage.setItem('SAVE_LOG_FILES', String(newState));
+
+    try {
+      const res = await apiClient.post('/api/v1/config/log-saving', { enabled: newState });
+      if (newState && res.data && res.data.path) {
+        alert(`Recording incoming data to "${res.data.path}"`);
+      }
+    } catch (e) {
+      console.error('Failed to toggle log saving', e);
+    }
+  };
+
+  useEffect(() => {
+    apiClient.post('/api/v1/config/log-saving', { enabled: isLogSaving }).catch(console.error);
+  }, []);
 
   // Group log stats strictly by server_id + server_serial + device_name + device_ip
   const deviceLogStats = useMemo(() => {
@@ -109,6 +133,8 @@ export function ConnectionsMonitor({
       {isNetworkFormOpen && (
         <AddExternalServer
           onSave={onSave}
+          initialIp='192.168.1.'
+          initialPort='5050'
           initialMode={initState}
           onClose={() => setIsNetworkFormOpen(false)}
         />
@@ -123,7 +149,7 @@ export function ConnectionsMonitor({
 
       {/* Main Connections Monitor Area */}
       <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
-        <div className="max-w-[1400px] mx-auto flex flex-col gap-6 animate-in fade-in duration-500">
+        <div className="mx-auto flex flex-col gap-6 animate-in fade-in duration-500">
 
           {/* Quick System Info Overview */}
           <div className="flex items-center justify-between border-b border-outline-variant/10 pb-4 shrink-0">
@@ -157,6 +183,26 @@ export function ConnectionsMonitor({
                   </div>
                 </div>
               </div>
+              <div className="w-px h-8 bg-outline-variant/10"></div>
+
+              <div className="flex flex-col gap-1">
+                <span className="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest flex items-center gap-2">
+                  Save Log Files
+                </span>
+                <div className="flex items-center gap-2 h-full">
+                  <div
+                    onClick={toggleLogSaving}
+                    className={`relative w-9 h-5 rounded-full cursor-pointer transition-colors duration-300 ${isLogSaving ? 'bg-primary' : 'bg-outline-variant/30'}`}
+                  >
+                    <div className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-300 ${isLogSaving ? 'translate-x-4' : 'translate-x-0'}`}></div>
+                  </div>
+                  <span className={`text-[11px] font-bold tracking-widest uppercase transition-colors ${isLogSaving ? 'text-primary' : 'text-on-surface-variant/50'}`}>
+                    {isLogSaving ? 'ON' : 'OFF'}
+                  </span>
+                </div>
+              </div>
+              <div className="w-px h-8 bg-outline-variant/10"></div>
+
             </div>
 
           </div>

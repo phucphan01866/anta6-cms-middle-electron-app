@@ -33,12 +33,31 @@ function getLocalIP() {
   return preferred?.address || '127.0.0.1';
 }
 
+// ─── Tìm cổng trống ─────────────────────────────────────────────────────────
+function findFreePort(startPort) {
+  return new Promise((resolve) => {
+    const net = require('net');
+    const server = net.createServer();
+    server.listen(startPort, () => {
+      const port = server.address().port;
+      server.close(() => resolve(port));
+    });
+    server.on('error', (e) => {
+      if (e.code === 'EADDRINUSE') {
+        resolve(findFreePort(startPort + 1));
+      } else {
+        resolve(startPort);
+      }
+    });
+  });
+}
+
 // In dev mode, we assume the backend is started via concurrently or separately.
 // For production mode, we might want to start the backend directly here.
 const isDev = !app.isPackaged;
 let backendProcess = null;
 
-function startBackend() {
+function startBackend(bePort) {
   const osPlatform = os.platform();
   const beExecutableName = osPlatform === 'win32' ? 'cms-ai-vms-middle.exe' : 'cms-ai-vms-middle';
 
@@ -48,12 +67,13 @@ function startBackend() {
 
   const runtimeIP = getLocalIP();
   if (fs.existsSync(binaryPath)) {
-    console.log('[Electron] Starting Backend Sidecar...', binaryPath);
+    console.log(`[Electron] Starting Backend Sidecar on port ${bePort}...`, binaryPath);
     const executeEnv = { 
       ...process.env, 
       IS_PACKAGED: 'true', 
       USER_DATA_PATH: app.getPath('userData'),
-      LOCAL_IP: runtimeIP
+      LOCAL_IP: runtimeIP,
+      BE_PORT: bePort
     };
     backendProcess = spawn(binaryPath, [], { cwd: path.dirname(binaryPath), env: executeEnv });
     backendProcess.stdout.on('data', (data) => console.log(`[BE]: ${data}`));
@@ -89,14 +109,21 @@ function createWindow() {
   });
 }
 
-app.whenReady().then(() => {
+let resolvedBePort = null;
+
+app.whenReady().then(async () => {
   ipcMain.on('get-local-ip', (event) => {
     event.returnValue = getLocalIP();
   });
 
+  ipcMain.on('get-be-port', (event) => {
+    event.returnValue = resolvedBePort;
+  });
+
   if (!isDev) {
     // Start backend in production
-    startBackend();
+    resolvedBePort = await findFreePort(5050);
+    startBackend(resolvedBePort);
   }
 
   createWindow();
