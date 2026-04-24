@@ -1,6 +1,28 @@
 import { io } from 'socket.io-client';
 
-const getBeHost = () => localStorage.getItem('BE_HOST') || import.meta.env.VITE_BE_HOST || '127.0.0.1';
+declare global {
+  interface Window {
+    electronAPI?: {
+      getLocalIP: () => string;
+    };
+  }
+}
+
+const getBeHost = () => {
+  // 1. Ưu tiên: User ghi đè qua localStorage
+  const localHost = localStorage.getItem('BE_HOST');
+  if (localHost) return localHost;
+
+  // 2. Chạy trong vỏ Electron Production: Ưu tiên lấy IP thực tế qua IPC, nếu không lấy được mới fallback về 127.0.0.1
+  if (typeof window !== 'undefined' && window.electronAPI && window.electronAPI.getLocalIP) {
+    const detectedIP = window.electronAPI.getLocalIP();
+    return detectedIP || '127.0.0.1';
+  }
+
+  // 3. Fallback cho Dev Web: Dùng giá trị build-time VITE_BE_HOST
+  return import.meta.env.VITE_BE_HOST || '127.0.0.1';
+};
+
 const getBePort = () => localStorage.getItem('BE_PORT') || import.meta.env.VITE_BE_PORT || '5050';
 const beURL = `http://${getBeHost()}:${getBePort()}`;
 

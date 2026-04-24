@@ -1,4 +1,4 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
 const fs = require('fs');
@@ -46,9 +46,15 @@ function startBackend() {
     ? path.join(__dirname, 'build-be', beExecutableName)
     : path.join(process.resourcesPath, 'bin', beExecutableName);
 
+  const runtimeIP = getLocalIP();
   if (fs.existsSync(binaryPath)) {
     console.log('[Electron] Starting Backend Sidecar...', binaryPath);
-    const executeEnv = { ...process.env, IS_PACKAGED: 'true', USER_DATA_PATH: app.getPath('userData') };
+    const executeEnv = { 
+      ...process.env, 
+      IS_PACKAGED: 'true', 
+      USER_DATA_PATH: app.getPath('userData'),
+      LOCAL_IP: runtimeIP
+    };
     backendProcess = spawn(binaryPath, [], { cwd: path.dirname(binaryPath), env: executeEnv });
     backendProcess.stdout.on('data', (data) => console.log(`[BE]: ${data}`));
     backendProcess.stderr.on('data', (data) => console.error(`[BE ERROR]: ${data}`));
@@ -84,6 +90,10 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  ipcMain.on('get-local-ip', (event) => {
+    event.returnValue = getLocalIP();
+  });
+
   if (!isDev) {
     // Start backend in production
     startBackend();
